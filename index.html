@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pulse</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="app-shell">
+    <header class="top-bar">
+      <div>
+        <h1>Pulse</h1>
+        <p class="tagline">fictional social feed studio</p>
+      </div>
+      <div class="mode-switch" role="tablist" aria-label="Mode switch">
+        <button id="adminModeBtn" class="tab-btn active" type="button">Composer / Admin</button>
+        <button id="feedModeBtn" class="tab-btn" type="button">Feed</button>
+      </div>
+    </header>
+
+    <section id="adminPanel" class="panel admin-panel" aria-label="Composer and admin mode">
+      <h2>Create content</h2>
+      <form id="composerForm" class="composer-form">
+        <label>
+          Post text
+          <textarea id="postText" rows="4" placeholder="Write a post or comment..." required></textarea>
+        </label>
+
+        <div class="form-row">
+          <label>
+            Post type
+            <select id="postType">
+              <option value="post">Post</option>
+              <option value="comment">Comment</option>
+            </select>
+          </label>
+
+          <label>
+            Parent post (for comments)
+            <select id="parentPostSelect">
+              <option value="">None</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="form-row">
+          <label class="file-label">
+            Image / GIF / video thumbnail
+            <input id="mediaFile" type="file" accept="image/*,video/*" />
+          </label>
+
+          <label class="checkbox-line">
+            <input id="isSponsored" type="checkbox" />
+            Mark as Sponsored
+          </label>
+        </div>
+
+        <div class="form-row">
+          <label>
+            Author handle
+            <input id="authorHandle" type="text" value="@studio.pulse" />
+          </label>
+
+          <label>
+            Header line
+            <input id="authorSubMeta" type="text" value="music video draft" />
+          </label>
+        </div>
+
+        <button class="publish-btn" type="submit">Publish</button>
+      </form>
+    </section>
+
+    <section id="feedPanel" class="panel feed-panel" aria-label="Pulse feed mode">
+      <div class="feed-controls">
+        <label class="checkbox-line">
+          <input id="autoScrollEnabled" type="checkbox" checked />
+          Auto-scroll
+        </label>
+
+        <label>
+          Speed
+          <input id="scrollSpeed" type="range" min="10" max="90" value="34" />
+        </label>
+
+        <label class="checkbox-line">
+          <input id="pauseAtPosts" type="checkbox" checked />
+          Pause at posts
+        </label>
+      </div>
+
+      <section id="feed" class="feed" aria-label="Feed timeline"></section>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>

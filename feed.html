@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pulse Feed</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body data-page="feed">
+  <div class="layout">
+    <aside class="sidebar left-sidebar" aria-label="Navigation">
+      <div class="left-brand">
+        <img src="PulseWhite.svg" alt="Pulse logo" class="left-brand-logo" />
+        <h2>Pulse</h2>
+      </div>
+
+      <nav class="menu" aria-label="Main menu">
+        <a href="feed.html"><span class="menu-icon">⌂</span>Anasayfa</a>
+        <a href="feed.html"><span class="menu-icon">#</span>Keşfet</a>
+        <a href="feed.html"><span class="menu-icon">◉</span>Bildirimler</a>
+        <a href="feed.html"><span class="menu-icon">✉</span>Mesajlar</a>
+        <a href="feed.html" class="premium-link"><span class="menu-icon">$</span>Premium</a>
+      </nav>
+    </aside>
+
+    <main class="app-shell feed-shell">
+      <section class="panel" aria-label="Pulse feed mode">
+        <div class="feed-controls">
+          <label class="checkbox-line">
+            <input id="autoScrollEnabled" type="checkbox" checked />
+            Auto-scroll
+          </label>
+
+          <label>
+            Speed
+            <input id="scrollSpeed" type="range" min="10" max="90" value="34" />
+          </label>
+
+          <label class="checkbox-line">
+            <input id="pauseAtPosts" type="checkbox" checked />
+            Pause at posts
+          </label>
+
+          <a href="admin.html" class="tab-btn">Composer / Admin</a>
+        </div>
+
+        <section id="feed" class="feed" aria-label="Feed timeline"></section>
+      </section>
+    </main>
+
+    <aside class="sidebar right-sidebar" aria-label="Discover and follow">
+      <input id="searchInput" type="text" placeholder="Ara..." class="search-input" />
+      <section class="suggestions">
+        <h3>Takip önerileri</h3>
+        <div id="suggestionsList"></div>
+      </section>
+    </aside>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

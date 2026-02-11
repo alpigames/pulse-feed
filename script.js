@@ -2,6 +2,10 @@
   const POSTS_KEY = 'pulseFeedPosts.v5';
   const SUGGESTIONS_KEY = 'pulseSuggestions.v2';
   const MUSIC_KEY = 'pulseMusicTracks.v1';
+  const MUSIC_DB_NAME = 'pulseFeedDb';
+  const MUSIC_DB_VERSION = 1;
+  const MUSIC_STORE_NAME = 'music';
+  const MUSIC_STORE_KEY = 'tracks';
   const page = document.body.dataset.page || 'admin';
 
   const state = {
@@ -68,6 +72,7 @@
     source: null,
     rafId: 0,
   };
+  let musicDbPromise = null;
 
   function escapeHtml(str) {
     return String(str)
@@ -112,6 +117,76 @@
     }, 2500);
   }
 
+
+
+  function openMusicDb() {
+    if (!window.indexedDB) return Promise.resolve(null);
+    if (musicDbPromise) return musicDbPromise;
+
+    musicDbPromise = new Promise((resolve, reject) => {
+      const request = indexedDB.open(MUSIC_DB_NAME, MUSIC_DB_VERSION);
+
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains(MUSIC_STORE_NAME)) {
+          db.createObjectStore(MUSIC_STORE_NAME);
+        }
+      };
+
+      request.onsuccess = () => {
+        const db = request.result;
+        db.onversionchange = () => {
+          db.close();
+          musicDbPromise = null;
+        };
+        resolve(db);
+      };
+
+      request.onerror = () => {
+        musicDbPromise = null;
+        reject(request.error || new Error('IndexedDB açılamadı'));
+      };
+    });
+
+    return musicDbPromise;
+  }
+
+  async function loadTracksFromDb() {
+    const db = await openMusicDb();
+    if (!db) return null;
+
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(MUSIC_STORE_NAME, 'readonly');
+      const store = tx.objectStore(MUSIC_STORE_NAME);
+      const request = store.get(MUSIC_STORE_KEY);
+      request.onsuccess = () => {
+        const result = request.result;
+        resolve(Array.isArray(result) ? result : []);
+      };
+      request.onerror = () => reject(request.error || new Error('Şarkılar okunamadı'));
+    });
+  }
+
+  async function saveTracksToDb() {
+    const db = await openMusicDb();
+    if (!db) {
+      try {
+        localStorage.setItem(MUSIC_KEY, JSON.stringify(state.tracks));
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
+    return new Promise((resolve) => {
+      const tx = db.transaction(MUSIC_STORE_NAME, 'readwrite');
+      const store = tx.objectStore(MUSIC_STORE_NAME);
+      store.put(state.tracks, MUSIC_STORE_KEY);
+      tx.oncomplete = () => resolve(true);
+      tx.onerror = () => resolve(false);
+      tx.onabort = () => resolve(false);
+    });
+  }
 
 
 
@@ -243,7 +318,7 @@
     return [];
   }
 
-  function loadData() {
+  async function loadData() {
     try {
       state.posts = JSON.parse(localStorage.getItem(POSTS_KEY) || 'null') || seedPosts();
     } catch {
@@ -256,10 +331,28 @@
       state.suggestions = seedSuggestions();
     }
 
+    let tracksLoaded = false;
     try {
-      state.tracks = JSON.parse(localStorage.getItem(MUSIC_KEY) || 'null') || seedTracks();
+      const dbTracks = await loadTracksFromDb();
+      if (Array.isArray(dbTracks)) {
+        state.tracks = dbTracks;
+        tracksLoaded = true;
+      }
     } catch {
-      state.tracks = seedTracks();
+      tracksLoaded = false;
+    }
+
+    if (!tracksLoaded) {
+      try {
+        state.tracks = JSON.parse(localStorage.getItem(MUSIC_KEY) || 'null') || seedTracks();
+      } catch {
+        state.tracks = seedTracks();
+      }
+
+      const migrated = await saveTracksToDb();
+      if (migrated) {
+        localStorage.removeItem(MUSIC_KEY);
+      }
     }
 
     state.tracks = state.tracks.map((track) => ({
@@ -271,18 +364,16 @@
 
     persistPosts();
     persistSuggestions();
-    persistTracks();
   }
 
   const persistPosts = () => localStorage.setItem(POSTS_KEY, JSON.stringify(state.posts));
   const persistSuggestions = () => localStorage.setItem(SUGGESTIONS_KEY, JSON.stringify(state.suggestions));
-  function persistTracks() {
-    try {
-      localStorage.setItem(MUSIC_KEY, JSON.stringify(state.tracks));
-      return true;
-    } catch {
-      return false;
+  async function persistTracks() {
+    const ok = await saveTracksToDb();
+    if (ok && window.indexedDB) {
+      localStorage.removeItem(MUSIC_KEY);
     }
+    return ok;
   }
 
   const getPosts = () => state.posts.filter((x) => x.type === 'post').sort((a, b) => a.createdAt - b.createdAt);
@@ -544,10 +635,10 @@
     state.tracks = [track, ...state.tracks];
     state.currentTrackId = track.id;
 
-    if (!persistTracks()) {
+    if (!(await persistTracks())) {
       state.tracks = state.tracks.filter((x) => x.id !== track.id);
       state.currentTrackId = state.tracks[0]?.id || '';
-      showMusicNotice('Şarkı kaydedilemedi. Tarayıcı depolama limiti dolu olabilir.', 'error');
+      showMusicNotice('Şarkı kaydedilemedi. Tarayıcı depolaması dolu olabilir.', 'error');
       return;
     }
 
@@ -557,7 +648,7 @@
     el.musicForm.reset();
   }
 
-  function deleteTrack(id) {
+  async function deleteTrack(id) {
     const snapshot = state.tracks;
     const previousTrackId = state.currentTrackId;
     const isCurrent = state.currentTrackId === id;
@@ -570,7 +661,7 @@
     } else if (isCurrent) {
       applySelectedTrack(state.tracks[0].id);
     }
-    if (!persistTracks()) {
+    if (!(await persistTracks())) {
       state.tracks = snapshot;
       state.currentTrackId = previousTrackId;
       showMusicNotice('Şarkı silinirken kayıt hatası oluştu.', 'error');
@@ -691,7 +782,7 @@
       el.musicManageList.addEventListener('click', (event) => {
         const btn = event.target.closest('[data-delete-track-id]');
         if (!btn) return;
-        deleteTrack(btn.getAttribute('data-delete-track-id'));
+        void deleteTrack(btn.getAttribute('data-delete-track-id'));
       });
     }
 
@@ -737,8 +828,8 @@
     if (el.scrollSpeed) el.scrollSpeed.addEventListener('input', () => { state.speedPxPerSecond = Number(el.scrollSpeed.value); });
   }
 
-  function init() {
-    loadData();
+  async function init() {
+    await loadData();
     refresh();
     bindEvents();
 
@@ -771,5 +862,5 @@
     });
   }
 
-  init();
+  void init();
 })();

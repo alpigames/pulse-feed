@@ -246,7 +246,7 @@
       const distanceFromCenter = Math.abs(i - centerIndex) / Math.max(1, centerIndex);
       const centerWeight = 1 - (distanceFromCenter ** 1.35);
       const envelope = 0.35 + (0.65 * centerWeight);
-      const halfHeight = Math.max(4, amplitude * envelope * height * 0.34);
+      const halfHeight = Math.max(2.8, amplitude * envelope * height * 0.238);
       const x = startX + (i * (barWidth + gap));
       const y = centerY - halfHeight;
       const gradient = ctx.createLinearGradient(0, y, 0, centerY + halfHeight);

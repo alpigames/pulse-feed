@@ -254,7 +254,7 @@
       const idle = audioPlayer.paused ? 0.08 : 0.16;
       const amplitude = (value * (audioPlayer.paused ? 0.45 : 1)) + idle;
       const envelope = barHeightProfile[i] || 0.35;
-      const halfHeight = Math.max(4, amplitude * envelope * height * 0.34);
+      const halfHeight = Math.max(3, amplitude * envelope * height * 0.255);
       const x = startX + (i * (barWidth + gap));
       const y = centerY - halfHeight;
       const gradient = ctx.createLinearGradient(0, y, 0, centerY + halfHeight);

@@ -57,6 +57,7 @@
     musicProgress: document.getElementById('musicProgress'),
     musicCurrentTime: document.getElementById('musicCurrentTime'),
     musicDuration: document.getElementById('musicDuration'),
+    musicFormNotice: document.getElementById('musicFormNotice'),
   };
 
   const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -92,6 +93,19 @@
     const sec = total % 60;
     return `${min}:${String(sec).padStart(2, '0')}`;
   }
+
+  function showMusicNotice(message, type = 'ok') {
+    if (!el.musicFormNotice) return;
+    el.musicFormNotice.textContent = message;
+    el.musicFormNotice.className = `form-notice ${type}`;
+    window.setTimeout(() => {
+      if (el.musicFormNotice && el.musicFormNotice.textContent === message) {
+        el.musicFormNotice.textContent = '';
+        el.musicFormNotice.className = 'form-notice';
+      }
+    }, 2500);
+  }
+
   function avatarFor(author) {
     const seed = encodeURIComponent(String(author).replace('@', ''));
     return `https://api.dicebear.com/9.x/thumbs/svg?seed=${seed}`;
@@ -190,7 +204,14 @@
 
   const persistPosts = () => localStorage.setItem(POSTS_KEY, JSON.stringify(state.posts));
   const persistSuggestions = () => localStorage.setItem(SUGGESTIONS_KEY, JSON.stringify(state.suggestions));
-  const persistTracks = () => localStorage.setItem(MUSIC_KEY, JSON.stringify(state.tracks));
+  function persistTracks() {
+    try {
+      localStorage.setItem(MUSIC_KEY, JSON.stringify(state.tracks));
+      return true;
+    } catch {
+      return false;
+    }
+  }
 
   const getPosts = () => state.posts.filter((x) => x.type === 'post').sort((a, b) => a.createdAt - b.createdAt);
   const getCommentsFor = (postId) => state.posts.filter((x) => x.type === 'comment' && x.parentId === postId).sort((a, b) => a.createdAt - b.createdAt);
@@ -444,17 +465,41 @@
     const artist = el.musicArtist?.value.trim();
     const file = el.musicFile?.files?.[0] || null;
     const coverFile = el.musicCover?.files?.[0] || null;
-    if (!title || !artist || !file || !coverFile) return;
+    if (!title || !artist || !file || !coverFile) {
+      showMusicNotice('Lütfen tüm alanları doldurun.', 'error');
+      return;
+    }
+
+    const allowedAudio = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav', 'audio/mp4', 'audio/x-m4a', 'audio/ogg', 'audio/aac'];
+    const allowedCover = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedAudio.includes(file.type)) {
+      showMusicNotice('Audio formatı desteklenmiyor. MP3/WAV/M4A/OGG/AAC kullanın.', 'error');
+      return;
+    }
+
+    if (!allowedCover.includes(coverFile.type)) {
+      showMusicNotice('Kapak formatı desteklenmiyor. JPG/PNG/WEBP kullanın.', 'error');
+      return;
+    }
 
     const src = await toDataUrl(file);
     const cover = await toDataUrl(coverFile);
     const track = { id: uid(), title, artist, cover, src, createdAt: Date.now() };
-    state.tracks.unshift(track);
+    const previousTracks = state.tracks;
+    state.tracks = [track, ...state.tracks];
     state.currentTrackId = track.id;
-    persistTracks();
+
+    if (!persistTracks()) {
+      state.tracks = previousTracks;
+      state.currentTrackId = state.tracks[0]?.id || '';
+      showMusicNotice('Şarkı kaydedilemedi. Dosya boyutu çok büyük olabilir.', 'error');
+      return;
+    }
+
     refresh();
     applySelectedTrack(track.id);
     el.musicForm.reset();
+    showMusicNotice('Şarkı eklendi.', 'ok');
   }
 
   function deleteTrack(id) {
@@ -468,7 +513,10 @@
     } else if (isCurrent) {
       applySelectedTrack(state.tracks[0].id);
     }
-    persistTracks();
+    if (!persistTracks()) {
+      showMusicNotice('Şarkı silinirken kayıt hatası oluştu.', 'error');
+      return;
+    }
     refresh();
   }
 

@@ -176,6 +176,26 @@ input[type="file"] {
   font-size: 1.45rem;
 }
 
+
+.hint-text {
+  color: #c7c7c7;
+  font-size: 0.8rem;
+}
+
+.form-notice {
+  min-height: 1em;
+  margin: 0;
+  font-size: 0.86rem;
+}
+
+.form-notice.ok {
+  color: #39d353;
+}
+
+.form-notice.error {
+  color: #ff7b72;
+}
+
 .music-upload h3 {
   margin: 0 0 8px;
 }

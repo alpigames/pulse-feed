@@ -189,11 +189,15 @@
     ctx.fillStyle = '#0a0e17';
     ctx.fillRect(0, 0, width, height);
 
-    const barCount = 22;
-    const gap = 6;
-    const barWidth = 8;
+    const targetBarCount = 22;
+    const gap = 3;
+    const barWidth = 5;
+    const sidePadding = 2 * (barWidth + gap);
+    const maxClusterWidth = Math.max(barWidth, width - (sidePadding * 2));
+    const fitBarCount = Math.max(1, Math.floor((maxClusterWidth + gap) / (barWidth + gap)));
+    const barCount = Math.min(targetBarCount, fitBarCount);
     const clusterWidth = (barCount * barWidth) + ((barCount - 1) * gap);
-    const startX = Math.max(0, (width - clusterWidth) / 2);
+    const startX = Math.max(sidePadding, (width - clusterWidth) / 2);
     const centerY = height / 2;
 
     if (visualizer.analyser && visualizer.dataArray) {

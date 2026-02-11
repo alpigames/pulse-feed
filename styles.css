@@ -421,7 +421,8 @@ textarea { min-height: 90px; resize: vertical; }
   width: 10px;
   height: 10px;
   object-fit: contain;
-  opacity: 0.95;
+  opacity: 0.98;
+  filter: brightness(0) saturate(100%) invert(59%) sepia(66%) saturate(488%) hue-rotate(84deg) brightness(97%) contrast(92%);
 }
 .vip-tag {
   display: inline-flex;

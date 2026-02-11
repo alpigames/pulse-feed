@@ -189,10 +189,12 @@
     ctx.fillStyle = '#0a0e17';
     ctx.fillRect(0, 0, width, height);
 
-    const barCount = 40;
-    const gap = 4;
-    const barWidth = (width - (barCount - 1) * gap) / barCount;
-    const baseline = height * 0.78;
+    const barCount = 22;
+    const gap = 6;
+    const barWidth = 8;
+    const clusterWidth = (barCount * barWidth) + ((barCount - 1) * gap);
+    const startX = Math.max(0, (width - clusterWidth) / 2);
+    const centerY = height / 2;
 
     if (visualizer.analyser && visualizer.dataArray) {
       visualizer.analyser.getByteFrequencyData(visualizer.dataArray);
@@ -200,16 +202,16 @@
 
     for (let i = 0; i < barCount; i += 1) {
       const value = visualizer.dataArray ? visualizer.dataArray[i % visualizer.dataArray.length] / 255 : 0;
-      const idle = audioPlayer.paused ? 0.08 : 0.18;
+      const idle = audioPlayer.paused ? 0.08 : 0.16;
       const amplitude = (value * (audioPlayer.paused ? 0.45 : 1)) + idle;
-      const barHeight = Math.max(6, amplitude * height * 0.72);
-      const x = i * (barWidth + gap);
-      const y = baseline - barHeight;
-      const gradient = ctx.createLinearGradient(0, y, 0, baseline);
+      const halfHeight = Math.max(4, amplitude * height * 0.3);
+      const x = startX + (i * (barWidth + gap));
+      const y = centerY - halfHeight;
+      const gradient = ctx.createLinearGradient(0, y, 0, centerY + halfHeight);
       gradient.addColorStop(0, '#9cb6ff');
       gradient.addColorStop(1, '#41527e');
       ctx.fillStyle = gradient;
-      ctx.fillRect(x, y, barWidth, barHeight);
+      ctx.fillRect(x, y, barWidth, halfHeight * 2);
     }
 
     visualizer.rafId = requestAnimationFrame(drawVisualizer);

@@ -106,6 +106,49 @@
     }, 2500);
   }
 
+
+  function getFileExtension(name) {
+    const parts = String(name || '').toLowerCase().split('.');
+    return parts.length > 1 ? parts.pop() : '';
+  }
+
+  function isAllowedFile(file, { mimeTypes = [], extensions = [] }) {
+    if (!file) return false;
+    const mime = String(file.type || '').toLowerCase();
+    const ext = getFileExtension(file.name);
+    const mimeOk = mimeTypes.length ? mimeTypes.includes(mime) : true;
+    const extOk = extensions.length ? extensions.includes(ext) : true;
+    return mimeOk || extOk;
+  }
+
+  function toImageDataUrl(file, maxSide = 1024, quality = 0.82) {
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      const reader = new FileReader();
+      reader.onload = () => {
+        image.src = String(reader.result);
+      };
+      reader.onerror = reject;
+      image.onerror = reject;
+      image.onload = () => {
+        const ratio = Math.min(1, maxSide / Math.max(image.width, image.height));
+        const width = Math.max(1, Math.round(image.width * ratio));
+        const height = Math.max(1, Math.round(image.height * ratio));
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Canvas context unavailable'));
+          return;
+        }
+        ctx.drawImage(image, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/webp', quality));
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
   function avatarFor(author) {
     const seed = encodeURIComponent(String(author).replace('@', ''));
     return `https://api.dicebear.com/9.x/thumbs/svg?seed=${seed}`;
@@ -470,39 +513,64 @@
       return;
     }
 
-    const allowedAudio = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav', 'audio/mp4', 'audio/x-m4a', 'audio/ogg', 'audio/aac'];
-    const allowedCover = ['image/jpeg', 'image/png', 'image/webp'];
-    if (!allowedAudio.includes(file.type)) {
+    const audioRules = {
+      mimeTypes: ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav', 'audio/mp4', 'audio/x-m4a', 'audio/ogg', 'audio/aac'],
+      extensions: ['mp3', 'wav', 'm4a', 'ogg', 'aac'],
+    };
+    const coverRules = {
+      mimeTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
+      extensions: ['jpg', 'jpeg', 'png', 'webp'],
+    };
+
+    if (!isAllowedFile(file, audioRules)) {
       showMusicNotice('Audio formatı desteklenmiyor. MP3/WAV/M4A/OGG/AAC kullanın.', 'error');
       return;
     }
 
-    if (!allowedCover.includes(coverFile.type)) {
+    if (!isAllowedFile(coverFile, coverRules)) {
       showMusicNotice('Kapak formatı desteklenmiyor. JPG/PNG/WEBP kullanın.', 'error');
       return;
     }
 
     const src = await toDataUrl(file);
-    const cover = await toDataUrl(coverFile);
+    let cover = await toImageDataUrl(coverFile, 1024, 0.82);
     const track = { id: uid(), title, artist, cover, src, createdAt: Date.now() };
     const previousTracks = state.tracks;
     state.tracks = [track, ...state.tracks];
     state.currentTrackId = track.id;
 
     if (!persistTracks()) {
-      state.tracks = previousTracks;
-      state.currentTrackId = state.tracks[0]?.id || '';
-      showMusicNotice('Şarkı kaydedilemedi. Dosya boyutu çok büyük olabilir.', 'error');
-      return;
+      try {
+        cover = await toImageDataUrl(coverFile, 640, 0.68);
+        state.tracks = [{ ...track, cover }, ...previousTracks];
+        state.currentTrackId = track.id;
+      } catch {
+        state.tracks = previousTracks;
+        state.currentTrackId = state.tracks[0]?.id || '';
+        showMusicNotice('Kapak görseli işlenemedi. Farklı bir görsel deneyin.', 'error');
+        return;
+      }
+
+      if (!persistTracks()) {
+        state.tracks = previousTracks;
+        state.currentTrackId = state.tracks[0]?.id || '';
+        showMusicNotice('Kayıt limiti doldu. Kapak küçültüldü ama yine de kaydedilemedi.', 'error');
+        return;
+      }
+
+      showMusicNotice('Şarkı eklendi (kapak optimize edildi).', 'ok');
+    } else {
+      showMusicNotice('Şarkı eklendi.', 'ok');
     }
 
     refresh();
     applySelectedTrack(track.id);
     el.musicForm.reset();
-    showMusicNotice('Şarkı eklendi.', 'ok');
   }
 
   function deleteTrack(id) {
+    const snapshot = state.tracks;
+    const previousTrackId = state.currentTrackId;
     const isCurrent = state.currentTrackId === id;
     state.tracks = state.tracks.filter((x) => x.id !== id);
     if (!state.tracks.length) {
@@ -514,6 +582,8 @@
       applySelectedTrack(state.tracks[0].id);
     }
     if (!persistTracks()) {
+      state.tracks = snapshot;
+      state.currentTrackId = previousTrackId;
       showMusicNotice('Şarkı silinirken kayıt hatası oluştu.', 'error');
       return;
     }

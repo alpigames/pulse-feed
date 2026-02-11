@@ -78,13 +78,14 @@ input[type="file"] {
 
 .music-player {
   margin-top: 14px;
-  border: 1px solid #3a3a3a;
+  border: 1px solid #2b2f3a;
   border-radius: 22px;
   padding: 14px;
   display: grid;
   gap: 10px;
-  background: #f6f6f6;
-  color: #111;
+  background: linear-gradient(180deg, #11141c 0%, #090b10 100%);
+  color: #f5f7ff;
+  box-shadow: 0 0 0 1px rgba(85, 130, 255, 0.2), 0 10px 26px rgba(0, 0, 0, 0.35);
 }
 
 .music-player-head {
@@ -101,7 +102,7 @@ input[type="file"] {
 
 .music-player-status {
   margin: 0;
-  color: #5c5c5c;
+  color: #a6adc4;
   font-size: 0.85rem;
 }
 
@@ -109,7 +110,7 @@ input[type="file"] {
   width: 100%;
   aspect-ratio: 1 / 1;
   border-radius: 16px;
-  border: 1px solid #cecece;
+  border: 1px solid #2f3a4f;
   object-fit: cover;
   background: linear-gradient(135deg, #2f2f2f, #151515);
 }
@@ -121,31 +122,32 @@ input[type="file"] {
 .music-track-title {
   font-size: 1.7rem;
   font-weight: 700;
+  color: #f7f9ff;
 }
 
 .music-track-singer {
-  color: #666;
+  color: #aab3ca;
 }
 
 .music-track-select {
   width: 100%;
   border-radius: 10px;
   padding: 10px;
-  border: 1px solid #c7c7c7;
-  background: #fff;
-  color: #111;
+  border: 1px solid #2f3a4f;
+  background: #0f1320;
+  color: #eef2ff;
 }
 
 .music-time-row {
   display: flex;
   justify-content: space-between;
-  color: #666;
+  color: #aab3ca;
   font-size: 0.83rem;
 }
 
 .music-progress {
   width: 100%;
-  accent-color: #111;
+  accent-color: #7ca1ff;
 }
 
 .music-player-controls {
@@ -160,16 +162,17 @@ input[type="file"] {
   border: none;
   cursor: pointer;
   background: transparent;
-  color: #111;
+  color: #dfe6ff;
 }
 
 .player-main-btn {
   width: 62px;
   height: 62px;
   border-radius: 50%;
-  background: #1f1f1f;
+  background: radial-gradient(circle at 30% 25%, #506fff, #263663 70%);
   color: #fff;
   font-size: 1.4rem;
+  box-shadow: 0 8px 18px rgba(32, 74, 199, 0.35);
 }
 
 .player-icon-btn {
@@ -180,6 +183,7 @@ input[type="file"] {
 .hint-text {
   color: #c7c7c7;
   font-size: 0.8rem;
+  line-height: 1.35;
 }
 
 .form-notice {

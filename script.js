@@ -42,11 +42,21 @@
     pauseAtPosts: document.getElementById('pauseAtPosts'),
     musicForm: document.getElementById('musicForm'),
     musicTitle: document.getElementById('musicTitle'),
+    musicArtist: document.getElementById('musicArtist'),
+    musicCover: document.getElementById('musicCover'),
     musicFile: document.getElementById('musicFile'),
     musicManageList: document.getElementById('musicManageList'),
     musicTrackSelect: document.getElementById('musicTrackSelect'),
     musicToggleBtn: document.getElementById('musicToggleBtn'),
+    musicPrevBtn: document.getElementById('musicPrevBtn'),
+    musicNextBtn: document.getElementById('musicNextBtn'),
     musicPlayerStatus: document.getElementById('musicPlayerStatus'),
+    musicCoverImage: document.getElementById('musicCoverImage'),
+    musicTrackTitle: document.getElementById('musicTrackTitle'),
+    musicTrackSinger: document.getElementById('musicTrackSinger'),
+    musicProgress: document.getElementById('musicProgress'),
+    musicCurrentTime: document.getElementById('musicCurrentTime'),
+    musicDuration: document.getElementById('musicDuration'),
   };
 
   const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -74,6 +84,14 @@
     return `${Math.floor(h / 24)}d`;
   }
 
+
+  function formatAudioTime(seconds) {
+    if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
+    const total = Math.floor(seconds);
+    const min = Math.floor(total / 60);
+    const sec = total % 60;
+    return `${min}:${String(sec).padStart(2, '0')}`;
+  }
   function avatarFor(author) {
     const seed = encodeURIComponent(String(author).replace('@', ''));
     return `https://api.dicebear.com/9.x/thumbs/svg?seed=${seed}`;
@@ -156,6 +174,12 @@
     } catch {
       state.tracks = seedTracks();
     }
+
+    state.tracks = state.tracks.map((track) => ({
+      ...track,
+      artist: track.artist || 'Unknown Artist',
+      cover: track.cover || '',
+    }));
 
     state.currentTrackId = state.tracks[0]?.id || '';
 
@@ -265,11 +289,20 @@
     if (!state.tracks.length) {
       el.musicTrackSelect.innerHTML = '<option value="">Şarkı yok</option>';
       if (el.musicPlayerStatus) el.musicPlayerStatus.textContent = 'Henüz şarkı yüklenmedi';
-      if (el.musicToggleBtn) el.musicToggleBtn.disabled = true;
+      if (el.musicToggleBtn) {
+        el.musicToggleBtn.disabled = true;
+        el.musicToggleBtn.textContent = '▶';
+      }
+      if (el.musicTrackTitle) el.musicTrackTitle.textContent = 'Song';
+      if (el.musicTrackSinger) el.musicTrackSinger.textContent = 'Singer Name';
+      if (el.musicCoverImage) el.musicCoverImage.src = '';
+      if (el.musicCurrentTime) el.musicCurrentTime.textContent = '0:00';
+      if (el.musicDuration) el.musicDuration.textContent = '0:00';
+      if (el.musicProgress) el.musicProgress.value = '0';
       return;
     }
 
-    el.musicTrackSelect.innerHTML = state.tracks.map((track) => `<option value="${track.id}">${escapeHtml(track.title)}</option>`).join('');
+    el.musicTrackSelect.innerHTML = state.tracks.map((track) => `<option value="${track.id}">${escapeHtml(track.title)} · ${escapeHtml(track.artist || 'Unknown Artist')}</option>`).join('');
 
     if (!state.currentTrackId || !state.tracks.some((x) => x.id === state.currentTrackId)) {
       state.currentTrackId = state.tracks[0].id;
@@ -279,7 +312,7 @@
     if (el.musicPlayerStatus) el.musicPlayerStatus.textContent = audioPlayer.paused ? 'Hazır' : 'Çalıyor';
     if (el.musicToggleBtn) {
       el.musicToggleBtn.disabled = false;
-      el.musicToggleBtn.textContent = audioPlayer.paused ? 'Çal' : 'Duraklat';
+      el.musicToggleBtn.textContent = audioPlayer.paused ? '▶' : '❚❚';
     }
   }
 
@@ -288,6 +321,7 @@
     el.musicManageList.innerHTML = state.tracks.map((track) => `<div class="manage-item">
       <div>
         <p><strong>${escapeHtml(track.title)}</strong></p>
+        <small>${escapeHtml(track.artist || 'Unknown Artist')}</small>
       </div>
       <button class="delete-btn" type="button" data-delete-track-id="${track.id}">Delete</button>
     </div>`).join('');
@@ -300,7 +334,13 @@
     audioPlayer.src = track.src;
     audioPlayer.load();
     if (el.musicPlayerStatus) el.musicPlayerStatus.textContent = `${track.title} hazır`;
-    if (el.musicToggleBtn) el.musicToggleBtn.textContent = 'Çal';
+    if (el.musicToggleBtn) el.musicToggleBtn.textContent = '▶';
+    if (el.musicTrackTitle) el.musicTrackTitle.textContent = track.title;
+    if (el.musicTrackSinger) el.musicTrackSinger.textContent = track.artist || 'Unknown Artist';
+    if (el.musicCoverImage) el.musicCoverImage.src = track.cover || '';
+    if (el.musicCurrentTime) el.musicCurrentTime.textContent = '0:00';
+    if (el.musicDuration) el.musicDuration.textContent = '0:00';
+    if (el.musicProgress) el.musicProgress.value = '0';
   }
 
   function refresh() {
@@ -401,11 +441,14 @@
   async function onAddTrack(event) {
     event.preventDefault();
     const title = el.musicTitle?.value.trim();
+    const artist = el.musicArtist?.value.trim();
     const file = el.musicFile?.files?.[0] || null;
-    if (!title || !file) return;
+    const coverFile = el.musicCover?.files?.[0] || null;
+    if (!title || !artist || !file || !coverFile) return;
 
     const src = await toDataUrl(file);
-    const track = { id: uid(), title, src, createdAt: Date.now() };
+    const cover = await toDataUrl(coverFile);
+    const track = { id: uid(), title, artist, cover, src, createdAt: Date.now() };
     state.tracks.unshift(track);
     state.currentTrackId = track.id;
     persistTracks();
@@ -440,7 +483,7 @@
       try {
         await audioPlayer.play();
         if (el.musicPlayerStatus) el.musicPlayerStatus.textContent = 'Çalıyor';
-        if (el.musicToggleBtn) el.musicToggleBtn.textContent = 'Duraklat';
+        if (el.musicToggleBtn) el.musicToggleBtn.textContent = '❚❚';
       } catch {
         if (el.musicPlayerStatus) el.musicPlayerStatus.textContent = 'Tarayıcı ses oynatmayı engelledi';
       }
@@ -449,7 +492,7 @@
 
     audioPlayer.pause();
     if (el.musicPlayerStatus) el.musicPlayerStatus.textContent = 'Duraklatıldı';
-    if (el.musicToggleBtn) el.musicToggleBtn.textContent = 'Çal';
+    if (el.musicToggleBtn) el.musicToggleBtn.textContent = '▶';
   }
 
   function maybePauseAtPost(now) {
@@ -551,6 +594,34 @@
 
     if (el.musicToggleBtn) el.musicToggleBtn.addEventListener('click', togglePlayback);
 
+
+    if (el.musicPrevBtn) {
+      el.musicPrevBtn.addEventListener('click', () => {
+        if (!state.tracks.length) return;
+        const currentIndex = state.tracks.findIndex((x) => x.id === state.currentTrackId);
+        const nextIndex = currentIndex <= 0 ? state.tracks.length - 1 : currentIndex - 1;
+        applySelectedTrack(state.tracks[nextIndex].id);
+        if (!audioPlayer.paused) audioPlayer.play();
+      });
+    }
+
+    if (el.musicNextBtn) {
+      el.musicNextBtn.addEventListener('click', () => {
+        if (!state.tracks.length) return;
+        const currentIndex = state.tracks.findIndex((x) => x.id === state.currentTrackId);
+        const nextIndex = currentIndex >= state.tracks.length - 1 ? 0 : currentIndex + 1;
+        applySelectedTrack(state.tracks[nextIndex].id);
+        if (!audioPlayer.paused) audioPlayer.play();
+      });
+    }
+
+    if (el.musicProgress) {
+      el.musicProgress.addEventListener('input', () => {
+        if (!Number.isFinite(audioPlayer.duration) || !audioPlayer.duration) return;
+        audioPlayer.currentTime = (Number(el.musicProgress.value) / 100) * audioPlayer.duration;
+      });
+    }
+
     if (el.searchInput) el.searchInput.addEventListener('input', renderSuggestions);
     if (el.autoScrollEnabled) el.autoScrollEnabled.addEventListener('change', () => { state.autoScroll = el.autoScrollEnabled.checked; });
     if (el.pauseAtPosts) el.pauseAtPosts.addEventListener('change', () => { state.pauseAtPosts = el.pauseAtPosts.checked; });
@@ -563,6 +634,25 @@
     bindEvents();
 
     if (state.currentTrackId) applySelectedTrack(state.currentTrackId);
+
+    audioPlayer.addEventListener('loadedmetadata', () => {
+      if (el.musicDuration) el.musicDuration.textContent = formatAudioTime(audioPlayer.duration);
+    });
+
+    audioPlayer.addEventListener('timeupdate', () => {
+      if (el.musicCurrentTime) el.musicCurrentTime.textContent = formatAudioTime(audioPlayer.currentTime);
+      if (el.musicProgress && Number.isFinite(audioPlayer.duration) && audioPlayer.duration > 0) {
+        el.musicProgress.value = String((audioPlayer.currentTime / audioPlayer.duration) * 100);
+      }
+    });
+
+    audioPlayer.addEventListener('ended', () => {
+      if (!state.tracks.length) return;
+      const currentIndex = state.tracks.findIndex((x) => x.id === state.currentTrackId);
+      const nextIndex = currentIndex >= state.tracks.length - 1 ? 0 : currentIndex + 1;
+      applySelectedTrack(state.tracks[nextIndex].id);
+      audioPlayer.play();
+    });
 
     requestAnimationFrame((start) => {
       state.lastTime = start;

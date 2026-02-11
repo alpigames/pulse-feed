@@ -23,11 +23,21 @@
       </nav>
 
       <section class="music-player" aria-label="Müzik çalar">
-        <p class="music-player-title">Pulse Player</p>
-        <p id="musicPlayerStatus" class="music-player-status">Şarkı seçin</p>
-        <select id="musicTrackSelect" class="music-track-select"></select>
+        <canvas id="musicVisualizer" class="music-visualizer" aria-label="Şarkı görselleştirici"></canvas>
+        <div class="music-track-meta">
+          <p id="musicTrackTitle" class="music-track-title">Song</p>
+          <p id="musicTrackSinger" class="music-track-singer">Singer Name</p>
+        </div>
+        <select id="musicTrackSelect" class="music-track-select" aria-label="Şarkı seç"></select>
+        <div class="music-time-row">
+          <span id="musicCurrentTime">0:00</span>
+          <span id="musicDuration">0:00</span>
+        </div>
+        <input id="musicProgress" class="music-progress" type="range" min="0" max="100" value="0" />
         <div class="music-player-controls">
-          <button id="musicToggleBtn" type="button" class="publish-btn">Çal</button>
+          <button id="musicPrevBtn" type="button" class="player-icon-btn" aria-label="Önceki şarkı">⏮</button>
+          <button id="musicToggleBtn" type="button" class="player-main-btn" aria-label="Çal / Duraklat">▶</button>
+          <button id="musicNextBtn" type="button" class="player-icon-btn" aria-label="Sonraki şarkı">⏭</button>
         </div>
       </section>
     </aside>
@@ -36,7 +46,7 @@
       <section class="panel" aria-label="Pulse feed mode">
         <div class="feed-controls">
           <label class="checkbox-line">
-            <input id="autoScrollEnabled" type="checkbox" checked />
+            <input id="autoScrollEnabled" type="checkbox" />
             Auto-scroll
           </label>
 

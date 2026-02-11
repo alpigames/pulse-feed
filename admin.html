@@ -30,10 +30,15 @@
             <input id="musicTitle" type="text" placeholder="Parça adı" required />
           </label>
           <label>
+            Sanatçı
+            <input id="musicArtist" type="text" placeholder="Sanatçı adı" required />
+          </label>
+          <label>
             Audio dosyası
-            <input id="musicFile" type="file" accept="audio/*" required />
+            <input id="musicFile" type="file" accept=".mp3,.wav,.m4a,.ogg,.aac" required />
           </label>
           <button class="publish-btn" type="submit">Şarkı ekle</button>
+          <p id="musicFormNotice" class="form-notice" role="status" aria-live="polite"></p>
         </form>
         <div id="musicManageList" class="manage-list"></div>
       </section>
@@ -94,15 +99,16 @@
               <input id="authorHandle" type="text" value="@studio.pulse" />
             </label>
 
-            <label>
-              Header line
-              <input id="authorSubMeta" type="text" value="music video draft" />
-            </label>
           </div>
 
           <label class="checkbox-line">
             <input id="isSponsored" type="checkbox" />
             Mark as Sponsored
+          </label>
+
+          <label class="checkbox-line">
+            <input id="isVip" type="checkbox" />
+            Mark as VIP
           </label>
 
           <button class="publish-btn" type="submit">Publish</button>
@@ -113,31 +119,32 @@
           <div id="manageList" class="manage-list"></div>
         </section>
 
-        <section class="manager" aria-label="Suggestion manager">
-          <h2>Manage follow suggestions</h2>
-          <form id="suggestionForm" class="composer-form compact">
-            <div class="form-row">
-              <label>
-                Handle
-                <input id="suggestionHandle" type="text" placeholder="@new.creator" required />
-              </label>
-              <label>
-                Bio
-                <input id="suggestionBio" type="text" placeholder="short bio" required />
-              </label>
-            </div>
-            <label>
-              Profile image
-              <input id="suggestionAvatarFile" type="file" accept="image/*" />
-            </label>
-            <button class="publish-btn" type="submit">Add suggestion</button>
-          </form>
-          <div id="suggestionManageList" class="manage-list"></div>
-        </section>
       </section>
     </main>
 
     <aside class="sidebar right-sidebar" aria-label="Discover and follow">
+      <section class="manager suggestion-manager" aria-label="Suggestion manager">
+        <h2>Manage follow suggestions</h2>
+        <form id="suggestionForm" class="composer-form compact">
+          <div class="form-row">
+            <label>
+              Handle
+              <input id="suggestionHandle" type="text" placeholder="@new.creator" required />
+            </label>
+            <label>
+              Bio
+              <input id="suggestionBio" type="text" placeholder="short bio" required />
+            </label>
+          </div>
+          <label>
+            Profile image
+            <input id="suggestionAvatarFile" type="file" accept="image/*" />
+          </label>
+          <button class="publish-btn" type="submit">Add suggestion</button>
+        </form>
+        <div id="suggestionManageList" class="manage-list"></div>
+      </section>
+
       <input id="searchInput" type="text" placeholder="Ara..." class="search-input" />
       <section class="suggestions">
         <h3>Takip önerileri</h3>

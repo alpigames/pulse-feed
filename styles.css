@@ -69,7 +69,7 @@ input[type="file"] {
   font-size: 1.05rem;
 }
 .menu a:hover { border-color: #fff; }
-.menu-icon { display:inline-block; width: 24px; margin-right: 10px; text-align:center; opacity:.95; font-size: 1.15rem; }
+.menu-icon { display:inline-block; width: 36px; margin-right: 12px; text-align:center; opacity:.95; font-size: 2rem; line-height: 1; }
 .menu a.premium-link {
   color: var(--premium);
   border-color: color-mix(in srgb, var(--premium) 50%, #1f1f1f);

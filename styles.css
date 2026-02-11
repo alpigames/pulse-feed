@@ -76,6 +76,46 @@ input[type="file"] {
   font-weight: 700;
 }
 
+.music-player {
+  margin-top: 14px;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.music-player-title {
+  margin: 0;
+  font-weight: 700;
+}
+
+.music-player-status {
+  margin: 0;
+  color: #c7c7c7;
+  font-size: 0.92rem;
+}
+
+.music-track-select {
+  width: 100%;
+  border-radius: 10px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  background: #000;
+  color: #fff;
+}
+
+.music-player-controls {
+  display: flex;
+}
+
+.music-player-controls .publish-btn {
+  width: 100%;
+}
+
+.music-upload h3 {
+  margin: 0 0 8px;
+}
+
 .right-sidebar h3 { margin: 10px 0 0; font-size: 1.1rem; }
 
 .search-input {

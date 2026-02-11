@@ -21,6 +21,22 @@
         <a href="feed.html"><span class="menu-icon">✉</span>Mesajlar</a>
         <a href="feed.html" class="premium-link"><span class="menu-icon">$</span>Premium</a>
       </nav>
+
+      <section class="music-upload manager" aria-label="Müzik yönetimi">
+        <h3>Music Player</h3>
+        <form id="musicForm" class="composer-form compact">
+          <label>
+            Şarkı adı
+            <input id="musicTitle" type="text" placeholder="Parça adı" required />
+          </label>
+          <label>
+            Audio dosyası
+            <input id="musicFile" type="file" accept="audio/*" required />
+          </label>
+          <button class="publish-btn" type="submit">Şarkı ekle</button>
+        </form>
+        <div id="musicManageList" class="manage-list"></div>
+      </section>
     </aside>
 
     <main class="app-shell">

@@ -1,11 +1,14 @@
 (() => {
   const POSTS_KEY = 'pulseFeedPosts.v5';
   const SUGGESTIONS_KEY = 'pulseSuggestions.v2';
+  const MUSIC_KEY = 'pulseMusicTracks.v1';
   const page = document.body.dataset.page || 'admin';
 
   const state = {
     posts: [],
     suggestions: [],
+    tracks: [],
+    currentTrackId: '',
     autoScroll: true,
     pauseAtPosts: true,
     speedPxPerSecond: 34,
@@ -37,9 +40,17 @@
     autoScrollEnabled: document.getElementById('autoScrollEnabled'),
     scrollSpeed: document.getElementById('scrollSpeed'),
     pauseAtPosts: document.getElementById('pauseAtPosts'),
+    musicForm: document.getElementById('musicForm'),
+    musicTitle: document.getElementById('musicTitle'),
+    musicFile: document.getElementById('musicFile'),
+    musicManageList: document.getElementById('musicManageList'),
+    musicTrackSelect: document.getElementById('musicTrackSelect'),
+    musicToggleBtn: document.getElementById('musicToggleBtn'),
+    musicPlayerStatus: document.getElementById('musicPlayerStatus'),
   };
 
   const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const audioPlayer = new Audio();
 
   function escapeHtml(str) {
     return String(str)
@@ -123,6 +134,10 @@
     ];
   }
 
+  function seedTracks() {
+    return [];
+  }
+
   function loadData() {
     try {
       state.posts = JSON.parse(localStorage.getItem(POSTS_KEY) || 'null') || seedPosts();
@@ -136,12 +151,22 @@
       state.suggestions = seedSuggestions();
     }
 
+    try {
+      state.tracks = JSON.parse(localStorage.getItem(MUSIC_KEY) || 'null') || seedTracks();
+    } catch {
+      state.tracks = seedTracks();
+    }
+
+    state.currentTrackId = state.tracks[0]?.id || '';
+
     persistPosts();
     persistSuggestions();
+    persistTracks();
   }
 
   const persistPosts = () => localStorage.setItem(POSTS_KEY, JSON.stringify(state.posts));
   const persistSuggestions = () => localStorage.setItem(SUGGESTIONS_KEY, JSON.stringify(state.suggestions));
+  const persistTracks = () => localStorage.setItem(MUSIC_KEY, JSON.stringify(state.tracks));
 
   const getPosts = () => state.posts.filter((x) => x.type === 'post').sort((a, b) => a.createdAt - b.createdAt);
   const getCommentsFor = (postId) => state.posts.filter((x) => x.type === 'comment' && x.parentId === postId).sort((a, b) => a.createdAt - b.createdAt);
@@ -234,12 +259,58 @@
     </div>`).join('');
   }
 
+  function renderTrackSelect() {
+    if (!el.musicTrackSelect) return;
+
+    if (!state.tracks.length) {
+      el.musicTrackSelect.innerHTML = '<option value="">Şarkı yok</option>';
+      if (el.musicPlayerStatus) el.musicPlayerStatus.textContent = 'Henüz şarkı yüklenmedi';
+      if (el.musicToggleBtn) el.musicToggleBtn.disabled = true;
+      return;
+    }
+
+    el.musicTrackSelect.innerHTML = state.tracks.map((track) => `<option value="${track.id}">${escapeHtml(track.title)}</option>`).join('');
+
+    if (!state.currentTrackId || !state.tracks.some((x) => x.id === state.currentTrackId)) {
+      state.currentTrackId = state.tracks[0].id;
+    }
+
+    el.musicTrackSelect.value = state.currentTrackId;
+    if (el.musicPlayerStatus) el.musicPlayerStatus.textContent = audioPlayer.paused ? 'Hazır' : 'Çalıyor';
+    if (el.musicToggleBtn) {
+      el.musicToggleBtn.disabled = false;
+      el.musicToggleBtn.textContent = audioPlayer.paused ? 'Çal' : 'Duraklat';
+    }
+  }
+
+  function renderTrackManager() {
+    if (!el.musicManageList) return;
+    el.musicManageList.innerHTML = state.tracks.map((track) => `<div class="manage-item">
+      <div>
+        <p><strong>${escapeHtml(track.title)}</strong></p>
+      </div>
+      <button class="delete-btn" type="button" data-delete-track-id="${track.id}">Delete</button>
+    </div>`).join('');
+  }
+
+  function applySelectedTrack(trackId) {
+    const track = state.tracks.find((x) => x.id === trackId);
+    if (!track) return;
+    state.currentTrackId = track.id;
+    audioPlayer.src = track.src;
+    audioPlayer.load();
+    if (el.musicPlayerStatus) el.musicPlayerStatus.textContent = `${track.title} hazır`;
+    if (el.musicToggleBtn) el.musicToggleBtn.textContent = 'Çal';
+  }
+
   function refresh() {
     renderParentOptions();
     renderFeed();
     renderManageList();
     renderSuggestions();
     renderSuggestionManager();
+    renderTrackSelect();
+    renderTrackManager();
   }
 
   function toDataUrl(file) {
@@ -327,6 +398,60 @@
     renderSuggestionManager();
   }
 
+  async function onAddTrack(event) {
+    event.preventDefault();
+    const title = el.musicTitle?.value.trim();
+    const file = el.musicFile?.files?.[0] || null;
+    if (!title || !file) return;
+
+    const src = await toDataUrl(file);
+    const track = { id: uid(), title, src, createdAt: Date.now() };
+    state.tracks.unshift(track);
+    state.currentTrackId = track.id;
+    persistTracks();
+    refresh();
+    applySelectedTrack(track.id);
+    el.musicForm.reset();
+  }
+
+  function deleteTrack(id) {
+    const isCurrent = state.currentTrackId === id;
+    state.tracks = state.tracks.filter((x) => x.id !== id);
+    if (!state.tracks.length) {
+      state.currentTrackId = '';
+      audioPlayer.pause();
+      audioPlayer.removeAttribute('src');
+      audioPlayer.load();
+    } else if (isCurrent) {
+      applySelectedTrack(state.tracks[0].id);
+    }
+    persistTracks();
+    refresh();
+  }
+
+  async function togglePlayback() {
+    if (!state.tracks.length) return;
+    const selectedId = el.musicTrackSelect?.value || state.currentTrackId;
+    if (!audioPlayer.src || state.currentTrackId !== selectedId) {
+      applySelectedTrack(selectedId);
+    }
+
+    if (audioPlayer.paused) {
+      try {
+        await audioPlayer.play();
+        if (el.musicPlayerStatus) el.musicPlayerStatus.textContent = 'Çalıyor';
+        if (el.musicToggleBtn) el.musicToggleBtn.textContent = 'Duraklat';
+      } catch {
+        if (el.musicPlayerStatus) el.musicPlayerStatus.textContent = 'Tarayıcı ses oynatmayı engelledi';
+      }
+      return;
+    }
+
+    audioPlayer.pause();
+    if (el.musicPlayerStatus) el.musicPlayerStatus.textContent = 'Duraklatıldı';
+    if (el.musicToggleBtn) el.musicToggleBtn.textContent = 'Çal';
+  }
+
   function maybePauseAtPost(now) {
     if (!state.pauseAtPosts || page !== 'feed') return;
     const cards = Array.from(document.querySelectorAll('.post-card'));
@@ -408,6 +533,24 @@
       });
     }
 
+    if (el.musicForm) el.musicForm.addEventListener('submit', onAddTrack);
+
+    if (el.musicManageList) {
+      el.musicManageList.addEventListener('click', (event) => {
+        const btn = event.target.closest('[data-delete-track-id]');
+        if (!btn) return;
+        deleteTrack(btn.getAttribute('data-delete-track-id'));
+      });
+    }
+
+    if (el.musicTrackSelect) {
+      el.musicTrackSelect.addEventListener('change', () => {
+        applySelectedTrack(el.musicTrackSelect.value);
+      });
+    }
+
+    if (el.musicToggleBtn) el.musicToggleBtn.addEventListener('click', togglePlayback);
+
     if (el.searchInput) el.searchInput.addEventListener('input', renderSuggestions);
     if (el.autoScrollEnabled) el.autoScrollEnabled.addEventListener('change', () => { state.autoScroll = el.autoScrollEnabled.checked; });
     if (el.pauseAtPosts) el.pauseAtPosts.addEventListener('change', () => { state.pauseAtPosts = el.pauseAtPosts.checked; });
@@ -418,6 +561,8 @@
     loadData();
     refresh();
     bindEvents();
+
+    if (state.currentTrackId) applySelectedTrack(state.currentTrackId);
 
     requestAnimationFrame((start) => {
       state.lastTime = start;

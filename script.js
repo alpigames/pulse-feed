@@ -222,7 +222,7 @@
     ctx.fillStyle = '#0a0e17';
     ctx.fillRect(0, 0, width, height);
 
-    const targetBarCount = 22;
+    const targetBarCount = 25;
     const gap = 3;
     const barWidth = 5;
     const sidePadding = 2 * (barWidth + gap);
@@ -237,15 +237,23 @@
       visualizer.analyser.getByteFrequencyData(visualizer.dataArray);
     }
 
-    const centerIndex = (barCount - 1) / 2;
+    const barHeightProfile = [
+      0.28, 0.28,
+      0.45, 0.45, 0.45,
+      0.72, 0.72, 0.72,
+      0.45, 0.45, 0.45,
+      1.0, 1.0, 1.0,
+      0.45, 0.45, 0.45,
+      0.72, 0.72, 0.72,
+      0.45, 0.45, 0.45,
+      0.28, 0.28,
+    ];
 
     for (let i = 0; i < barCount; i += 1) {
       const value = visualizer.dataArray ? visualizer.dataArray[i % visualizer.dataArray.length] / 255 : 0;
       const idle = audioPlayer.paused ? 0.08 : 0.16;
       const amplitude = (value * (audioPlayer.paused ? 0.45 : 1)) + idle;
-      const distanceFromCenter = Math.abs(i - centerIndex) / Math.max(1, centerIndex);
-      const centerWeight = 1 - (distanceFromCenter ** 1.35);
-      const envelope = 0.35 + (0.65 * centerWeight);
+      const envelope = barHeightProfile[i] || 0.35;
       const halfHeight = Math.max(4, amplitude * envelope * height * 0.34);
       const x = startX + (i * (barWidth + gap));
       const y = centerY - halfHeight;

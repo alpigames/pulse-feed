@@ -417,13 +417,28 @@ textarea { min-height: 90px; resize: vertical; }
   justify-content: center;
   box-shadow: 0 0 0 1px rgba(57, 211, 83, 0.18);
 }
-.vip-badge img {
-  width: 10px;
-  height: 10px;
-  object-fit: contain;
-  opacity: 0.98;
-  filter: brightness(0) saturate(100%) invert(59%) sepia(66%) saturate(488%) hue-rotate(84deg) brightness(97%) contrast(92%);
+.vip-pulse-icon {
+  width: 11px;
+  height: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
 }
+.vip-pulse-icon i {
+  display: block;
+  width: 1.5px;
+  border-radius: 999px;
+  background: #39ff14;
+  box-shadow: 0 0 4px rgba(57, 255, 20, 0.55);
+}
+.vip-pulse-icon i:nth-child(1),
+.vip-pulse-icon i:nth-child(7) { height: 4px; }
+.vip-pulse-icon i:nth-child(2),
+.vip-pulse-icon i:nth-child(6) { height: 7px; }
+.vip-pulse-icon i:nth-child(3),
+.vip-pulse-icon i:nth-child(5) { height: 10px; }
+.vip-pulse-icon i:nth-child(4) { height: 11px; }
 .vip-tag {
   display: inline-flex;
   align-items: center;

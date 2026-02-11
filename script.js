@@ -424,7 +424,7 @@
         <header class="post-head">
           <img class="avatar" src="${avatar}" alt="${escapeHtml(post.author)} avatar" />
           <div>
-            <p class="meta-row"><span class="username">${escapeHtml(post.author)}</span>${post.vip ? ' <span class="vip-badge" aria-label="VIP"><span class="vip-badge-ring"><img src="PulseWhite.svg" alt="VIP" /></span></span>' : ''} <span class="timestamp">· ${timeAgo(post.createdAt)}</span></p>
+            <p class="meta-row"><span class="username">${escapeHtml(post.author)}</span>${post.vip ? ' <span class="vip-badge" aria-label="VIP"><span class="vip-badge-ring"><span class="vip-pulse-icon" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></span></span>' : ''} <span class="timestamp">· ${timeAgo(post.createdAt)}</span></p>
             <p class="sub-meta">${escapeHtml(post.subMeta || 'music video drafts')}</p>
           </div>
           ${post.sponsored ? '<span class="sponsored-label">Sponsored</span>' : ''}

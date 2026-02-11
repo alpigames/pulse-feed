@@ -9,7 +9,7 @@
     suggestions: [],
     tracks: [],
     currentTrackId: '',
-    autoScroll: true,
+    autoScroll: false,
     pauseAtPosts: true,
     speedPxPerSecond: 34,
     isPaused: false,

@@ -69,7 +69,7 @@ input[type="file"] {
   font-size: 1.05rem;
 }
 .menu a:hover { border-color: #fff; }
-.menu-icon { display:inline-block; width: 18px; margin-right: 8px; text-align:center; opacity:.95; }
+.menu-icon { display:inline-block; width: 24px; margin-right: 10px; text-align:center; opacity:.95; font-size: 1.15rem; }
 .menu a.premium-link {
   color: var(--premium);
   border-color: color-mix(in srgb, var(--premium) 50%, #1f1f1f);
@@ -169,10 +169,10 @@ input[type="file"] {
   width: 62px;
   height: 62px;
   border-radius: 50%;
-  background: radial-gradient(circle at 30% 25%, #506fff, #263663 70%);
+  background: #1a1f2b;
   color: #fff;
   font-size: 1.4rem;
-  box-shadow: 0 8px 18px rgba(32, 74, 199, 0.35);
+  box-shadow: none;
 }
 
 .player-icon-btn {

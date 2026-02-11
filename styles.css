@@ -204,6 +204,25 @@ input[type="file"] {
   margin: 0 0 8px;
 }
 
+.suggestion-manager {
+  margin-top: 0;
+  border-top: 0;
+  padding-top: 0;
+}
+
+.suggestion-manager h2 {
+  font-size: 1.55rem;
+  margin-bottom: 8px;
+}
+
+.suggestion-manager .form-row {
+  grid-template-columns: 1fr;
+}
+
+.suggestion-manager .manage-list {
+  max-height: 260px;
+}
+
 .right-sidebar h3 { margin: 10px 0 0; font-size: 1.1rem; }
 
 .search-input {
@@ -428,9 +447,52 @@ textarea { min-height: 90px; resize: vertical; }
   .left-sidebar,
   .right-sidebar { order: 2; }
   .app-shell { order: 1; }
+
+  body[data-page="admin"] .layout {
+    grid-template-columns: 280px minmax(0, 1fr);
+    max-width: 1240px;
+    align-items: start;
+  }
+
+  body[data-page="admin"] .left-sidebar,
+  body[data-page="admin"] .app-shell,
+  body[data-page="admin"] .right-sidebar {
+    order: initial;
+  }
+
+  body[data-page="admin"] .left-sidebar {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    position: sticky;
+  }
+
+  body[data-page="admin"] .app-shell {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  body[data-page="admin"] .right-sidebar {
+    grid-column: 2;
+    grid-row: 2;
+  }
 }
 
 @media (max-width: 760px) {
   .form-row { grid-template-columns: 1fr; }
   .top-bar { flex-direction: column; align-items: flex-start; }
+}
+
+@media (max-width: 700px) {
+  body[data-page="admin"] .layout {
+    grid-template-columns: 1fr;
+    max-width: 920px;
+  }
+
+  body[data-page="admin"] .left-sidebar,
+  body[data-page="admin"] .app-shell,
+  body[data-page="admin"] .right-sidebar {
+    grid-column: auto;
+    grid-row: auto;
+    position: static;
+  }
 }

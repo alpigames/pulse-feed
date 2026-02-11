@@ -66,7 +66,7 @@ input[type="file"] {
   text-decoration: none;
   border-radius: 10px;
   padding: 10px 12px;
-  font-size: 1.05rem;
+  font-size: 1.35rem;
 }
 .menu a:hover { border-color: #fff; }
 .menu-icon { display:inline-block; width: 36px; margin-right: 12px; text-align:center; opacity:.95; font-size: 2rem; line-height: 1; }

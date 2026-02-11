@@ -51,7 +51,7 @@
     musicPrevBtn: document.getElementById('musicPrevBtn'),
     musicNextBtn: document.getElementById('musicNextBtn'),
     musicPlayerStatus: document.getElementById('musicPlayerStatus'),
-    musicCoverImage: document.getElementById('musicCoverImage'),
+    musicVisualizer: document.getElementById('musicVisualizer'),
     musicTrackTitle: document.getElementById('musicTrackTitle'),
     musicTrackSinger: document.getElementById('musicTrackSinger'),
     musicProgress: document.getElementById('musicProgress'),
@@ -62,6 +62,13 @@
 
   const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const audioPlayer = new Audio();
+  const visualizer = {
+    audioCtx: null,
+    analyser: null,
+    dataArray: null,
+    source: null,
+    rafId: 0,
+  };
 
   function escapeHtml(str) {
     return String(str)
@@ -147,6 +154,65 @@
       };
       reader.readAsDataURL(file);
     });
+  }
+
+
+  function initVisualizer() {
+    if (!el.musicVisualizer || visualizer.analyser) return;
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+
+    visualizer.audioCtx = new AudioCtx();
+    visualizer.source = visualizer.audioCtx.createMediaElementSource(audioPlayer);
+    visualizer.analyser = visualizer.audioCtx.createAnalyser();
+    visualizer.analyser.fftSize = 128;
+    visualizer.source.connect(visualizer.analyser);
+    visualizer.analyser.connect(visualizer.audioCtx.destination);
+    visualizer.dataArray = new Uint8Array(visualizer.analyser.frequencyBinCount);
+    drawVisualizer();
+  }
+
+  function drawVisualizer() {
+    if (!el.musicVisualizer) return;
+    const canvas = el.musicVisualizer;
+    const rect = canvas.getBoundingClientRect();
+    const width = Math.max(1, Math.floor(rect.width));
+    const height = Math.max(1, Math.floor(rect.height));
+    if (canvas.width != width || canvas.height != height) {
+      canvas.width = width;
+      canvas.height = height;
+    }
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.fillStyle = '#0a0e17';
+    ctx.fillRect(0, 0, width, height);
+
+    const barCount = 40;
+    const gap = 4;
+    const barWidth = (width - (barCount - 1) * gap) / barCount;
+    const baseline = height * 0.78;
+
+    if (visualizer.analyser && visualizer.dataArray) {
+      visualizer.analyser.getByteFrequencyData(visualizer.dataArray);
+    }
+
+    for (let i = 0; i < barCount; i += 1) {
+      const value = visualizer.dataArray ? visualizer.dataArray[i % visualizer.dataArray.length] / 255 : 0;
+      const idle = audioPlayer.paused ? 0.08 : 0.18;
+      const amplitude = (value * (audioPlayer.paused ? 0.45 : 1)) + idle;
+      const barHeight = Math.max(6, amplitude * height * 0.72);
+      const x = i * (barWidth + gap);
+      const y = baseline - barHeight;
+      const gradient = ctx.createLinearGradient(0, y, 0, baseline);
+      gradient.addColorStop(0, '#9cb6ff');
+      gradient.addColorStop(1, '#41527e');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(x, y, barWidth, barHeight);
+    }
+
+    visualizer.rafId = requestAnimationFrame(drawVisualizer);
   }
 
   function avatarFor(author) {
@@ -359,7 +425,6 @@
       }
       if (el.musicTrackTitle) el.musicTrackTitle.textContent = 'Song';
       if (el.musicTrackSinger) el.musicTrackSinger.textContent = 'Singer Name';
-      if (el.musicCoverImage) el.musicCoverImage.src = '';
       if (el.musicCurrentTime) el.musicCurrentTime.textContent = '0:00';
       if (el.musicDuration) el.musicDuration.textContent = '0:00';
       if (el.musicProgress) el.musicProgress.value = '0';
@@ -401,7 +466,6 @@
     if (el.musicToggleBtn) el.musicToggleBtn.textContent = '▶';
     if (el.musicTrackTitle) el.musicTrackTitle.textContent = track.title;
     if (el.musicTrackSinger) el.musicTrackSinger.textContent = track.artist || 'Unknown Artist';
-    if (el.musicCoverImage) el.musicCoverImage.src = track.cover || '';
     if (el.musicCurrentTime) el.musicCurrentTime.textContent = '0:00';
     if (el.musicDuration) el.musicDuration.textContent = '0:00';
     if (el.musicProgress) el.musicProgress.value = '0';
@@ -599,6 +663,8 @@
 
     if (audioPlayer.paused) {
       try {
+        initVisualizer();
+        if (visualizer.audioCtx?.state === 'suspended') await visualizer.audioCtx.resume();
         await audioPlayer.play();
         if (el.musicPlayerStatus) el.musicPlayerStatus.textContent = 'Çalıyor';
         if (el.musicToggleBtn) el.musicToggleBtn.textContent = '❚❚';
@@ -752,6 +818,8 @@
     bindEvents();
 
     if (state.currentTrackId) applySelectedTrack(state.currentTrackId);
+
+    initVisualizer();
 
     audioPlayer.addEventListener('loadedmetadata', () => {
       if (el.musicDuration) el.musicDuration.textContent = formatAudioTime(audioPlayer.duration);

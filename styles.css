@@ -106,13 +106,13 @@ input[type="file"] {
   font-size: 0.85rem;
 }
 
-.music-cover-image {
+.music-visualizer {
   width: 100%;
   aspect-ratio: 1 / 1;
   border-radius: 16px;
   border: 1px solid #2f3a4f;
-  object-fit: cover;
-  background: linear-gradient(135deg, #2f2f2f, #151515);
+  background: #0a0e17;
+  display: block;
 }
 
 .music-track-meta p {

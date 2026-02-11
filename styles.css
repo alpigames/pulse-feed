@@ -401,6 +401,38 @@ textarea { min-height: 90px; resize: vertical; }
 .post-actions,
 .comments { margin: 0; }
 .username { font-weight: 700; }
+.vip-badge {
+  display: inline-flex;
+  vertical-align: middle;
+  margin-left: 6px;
+}
+.vip-badge-ring {
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  border: 1.5px solid #39d353;
+  background: color-mix(in srgb, #39d353 22%, #0a140d);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 1px rgba(57, 211, 83, 0.18);
+}
+.vip-badge img {
+  width: 10px;
+  height: 10px;
+  object-fit: contain;
+  opacity: 0.95;
+}
+.vip-tag {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid #39d353;
+  color: #39d353;
+  font-size: 0.72rem;
+}
 .sub-meta,
 .timestamp { color: #fff; }
 .sub-meta { margin-top: 2px; font-size: 0.85rem; }

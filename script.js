@@ -30,8 +30,8 @@
     mediaFile: document.getElementById('mediaFile'),
     authorAvatarFile: document.getElementById('authorAvatarFile'),
     isSponsored: document.getElementById('isSponsored'),
+    isVip: document.getElementById('isVip'),
     authorHandle: document.getElementById('authorHandle'),
-    authorSubMeta: document.getElementById('authorSubMeta'),
     feed: document.getElementById('feed'),
     manageList: document.getElementById('manageList'),
     suggestionForm: document.getElementById('suggestionForm'),
@@ -370,6 +370,11 @@
       artist: track.artist || 'Unknown Artist',
     }));
 
+    state.posts = state.posts.map((post) => ({
+      ...post,
+      vip: Boolean(post.vip),
+    }));
+
     state.currentTrackId = state.tracks[0]?.id || '';
 
     persistPosts();
@@ -419,7 +424,7 @@
         <header class="post-head">
           <img class="avatar" src="${avatar}" alt="${escapeHtml(post.author)} avatar" />
           <div>
-            <p class="meta-row"><span class="username">${escapeHtml(post.author)}</span> <span class="timestamp">· ${timeAgo(post.createdAt)}</span></p>
+            <p class="meta-row"><span class="username">${escapeHtml(post.author)}</span>${post.vip ? ' <span class="vip-badge" aria-label="VIP"><span class="vip-badge-ring"><img src="PulseWhite.svg" alt="VIP" /></span></span>' : ''} <span class="timestamp">· ${timeAgo(post.createdAt)}</span></p>
             <p class="sub-meta">${escapeHtml(post.subMeta || 'music video drafts')}</p>
           </div>
           ${post.sponsored ? '<span class="sponsored-label">Sponsored</span>' : ''}
@@ -441,7 +446,7 @@
     const sorted = [...state.posts].sort((a, b) => b.createdAt - a.createdAt);
     el.manageList.innerHTML = sorted.map((item) => `<div class="manage-item">
       <div>
-        <p><strong>${escapeHtml(item.author)}</strong> · <span>${item.type.toUpperCase()}</span> · <small>${timeAgo(item.createdAt)}</small></p>
+        <p><strong>${escapeHtml(item.author)}</strong>${item.vip ? ' <span class=\"vip-tag\">VIP</span>' : ''} · <span>${item.type.toUpperCase()}</span> · <small>${timeAgo(item.createdAt)}</small></p>
         <small>${escapeHtml(item.text.slice(0, 80))}${item.text.length > 80 ? '…' : ''}</small>
       </div>
       <button class="delete-btn" type="button" data-delete-post-id="${item.id}">Delete</button>
@@ -578,9 +583,10 @@
       type,
       author: (el.authorHandle.value.trim() || '@studio.pulse').replace(/\s+/g, ''),
       authorAvatar,
-      subMeta: el.authorSubMeta.value.trim() || 'music video draft',
+      subMeta: 'music video draft',
       text,
       sponsored: Boolean(el.isSponsored.checked),
+      vip: Boolean(el.isVip?.checked),
       media,
       createdAt: Date.now(),
       pauseMs: type === 'post' ? 2200 : 0,
@@ -592,7 +598,6 @@
 
     el.form.reset();
     el.authorHandle.value = '@studio.pulse';
-    el.authorSubMeta.value = 'music video draft';
   }
 
   function deletePostOrComment(id) {

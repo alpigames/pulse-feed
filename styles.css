@@ -11,6 +11,7 @@ body{padding:12px}
 .menu{display:grid;gap:8px}
 .menu a{text-decoration:none;border-radius:10px;padding:10px 12px;font-size:1.35rem;display:flex;align-items:center;justify-content:flex-start;gap:8px}
 .menu-icon{display:inline-block;width:56px;font-size:2.4rem;line-height:1}
+.menu-icon.small-icon{font-size:1.9rem}
 .app-shell{width:100%}
 .panel{border-radius:14px;padding:12px;margin-bottom:10px}
 h2{margin:0 0 10px;font-size:1.75rem}
@@ -65,3 +66,7 @@ textarea{min-height:110px;resize:vertical}
 @keyframes bounce{0%{transform:translateY(10px);opacity:0}100%{transform:translateY(0);opacity:1}}
 .record-btn{border-color:#ff6b6b;color:#ffb4b4}
 @media (max-width:1200px){.layout{grid-template-columns:1fr}.sidebar{position:static}.form-row{grid-template-columns:1fr}}
+
+.editable-avatar,.editable-text,.editable-media-wrap{cursor:pointer}
+.quick-comment-btn{margin-top:8px}
+.comment{display:flex;align-items:center;gap:8px}

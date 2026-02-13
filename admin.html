@@ -17,8 +17,8 @@
       <nav class="menu" aria-label="Main menu">
         <a href="feed.html"><span class="menu-icon">⌂</span>Anasayfa</a>
         <a href="feed.html"><span class="menu-icon">#</span>Keşfet</a>
-        <a href="feed.html"><span class="menu-icon">◉</span>Bildirimler</a>
-        <a href="feed.html"><span class="menu-icon">✉</span>Mesajlar</a>
+        <a href="feed.html"><span class="menu-icon small-icon">◉</span>Bildirimler</a>
+        <a href="feed.html"><span class="menu-icon small-icon">✉</span>Mesajlar</a>
       </nav>
 
       <section class="music-upload manager" aria-label="Müzik yönetimi">
@@ -39,18 +39,6 @@
         <h2>Create content</h2>
         <form id="composerForm" class="composer-form">
           <label>Post text<textarea id="postText" rows="4" required></textarea></label>
-
-          <div class="form-row">
-            <label>Post type
-              <select id="postType">
-                <option value="post">Post</option>
-                <option value="comment">Comment</option>
-              </select>
-            </label>
-            <label>Parent post (for comments)
-              <select id="parentPostSelect"><option value="">None</option></select>
-            </label>
-          </div>
 
           <div class="form-row">
             <label>Image / video<input id="mediaFile" type="file" accept="image/*,video/*" /></label>
@@ -108,6 +96,8 @@
     </aside>
   </div>
 
+  <input id="editAvatarInput" type="file" accept="image/*" hidden />
+  <input id="editMediaInput" type="file" accept="image/*,video/*" hidden />
   <script src="script.js"></script>
 </body>
 </html>

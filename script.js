@@ -18,7 +18,7 @@
     nickPool: [],
   };
 
-  const ids = ['composerForm','postText','postType','parentPostSelect','mediaFile','carouselFiles','carouselTimestamps','postTimestamp','authorAvatarFile','authorHandle','authorRandom','isSponsored','isVip','isBoosted','feed','adminFeed','manageList','suggestionForm','suggestionHandle','suggestionBio','suggestionAvatarFile','suggestionManageList','suggestionsList','searchInput','autoScrollEnabled','scrollSpeed','pauseAtPosts','musicForm','musicTitle','musicArtist','musicFile','musicManageList','musicTrackSelect','musicToggleBtn','musicPrevBtn','musicNextBtn','musicTrackTitle','musicTrackSinger','musicProgress','musicCurrentTime','musicDuration','musicVisualizer','timelineOverlay','recordToggleBtn'];
+  const ids = ['composerForm','postText','postType','parentPostSelect','mediaFile','carouselFiles','carouselTimestamps','postTimestamp','authorAvatarFile','authorHandle','authorRandom','isSponsored','isVip','isBoosted','feed','adminFeed','manageList','suggestionForm','suggestionHandle','suggestionBio','suggestionAvatarFile','suggestionManageList','suggestionsList','searchInput','autoScrollEnabled','scrollSpeed','pauseAtPosts','musicForm','musicTitle','musicArtist','musicFile','musicManageList','musicTrackSelect','musicToggleBtn','musicPrevBtn','musicNextBtn','musicTrackTitle','musicTrackSinger','musicProgress','musicCurrentTime','musicDuration','musicVisualizer','timelineOverlay','recordToggleBtn','editAvatarInput','editMediaInput'];
   const el = Object.fromEntries(ids.map((id) => [id, document.getElementById(id)]));
 
   const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -140,6 +140,8 @@
       return;
     }
 
+    const isAdminPreview = target.id === 'adminFeed';
+
     target.innerHTML = postList.map((p) => {
       const avatar = p.authorAvatar || avatarFor(p.author);
       const allComments = commentsFor(p.id);
@@ -149,12 +151,13 @@
 
       return `<article class="post-card" data-post-id="${p.id}">
         <header class="post-head">
-          <img class="avatar" src="${avatar}" alt="${esc(p.author)} avatar" />
+          <img class="avatar ${isAdminPreview ? 'editable-avatar' : ''}" src="${avatar}" alt="${esc(p.author)} avatar" ${isAdminPreview ? `data-edit-avatar="${p.id}"` : ''} />
           <p class="meta-row"><strong>${esc(p.author)}</strong> <span class="timestamp">· ${timeAgo(p.createdAt)}</span></p>
         </header>
-        <p class="post-text">${esc(p.text)}</p>
-        ${mediaNode({ src: p.media, mediaType: p.mediaType })}
+        <p class="post-text ${isAdminPreview ? 'editable-text' : ''}" ${isAdminPreview ? `data-edit-text="${p.id}"` : ''}>${esc(p.text)}</p>
+        <div ${isAdminPreview ? `data-edit-media="${p.id}" class="editable-media-wrap"` : ''}>${mediaNode({ src: p.media, mediaType: p.mediaType })}</div>
         <div class="post-actions"><span>❤ ${p.likes || 0}</span><span>↻ ${p.reposts || 0}</span></div>
+        ${isAdminPreview ? `<button class="publish-btn quick-comment-btn" type="button" data-quick-comment="${p.id}">+ Hızlı yorum</button>` : ''}
         <section class="comments">
           ${shownComments.map((c) => {
             const cAvatar = c.authorAvatar || avatarFor(c.author);
@@ -207,7 +210,6 @@
     renderSuggestionManager();
     renderTrackSelect();
     renderTrackManager();
-    buildTimeline();
   }
 
   function pickRandomNick() {
@@ -229,9 +231,8 @@
     const text = el.postText.value.trim();
     if (!text) return;
 
-    const type = el.postType.value;
-    const parentId = type === 'comment' ? (el.parentPostSelect.value || null) : null;
-    if (type === 'comment' && !parentId) return alert('Comment için parent post seçin.');
+    const type = 'post';
+    const parentId = null;
 
     const mediaFile = el.mediaFile.files?.[0] || null;
     const media = await toDataUrl(mediaFile);
@@ -266,6 +267,7 @@
     });
 
     persistPostAndSuggestions();
+    buildTimeline();
     refresh();
     el.composerForm.reset();
     if (el.authorRandom) el.authorRandom.checked = true;
@@ -520,11 +522,6 @@
   const autoRecordStop = () => { stopRecording(); };
 
   function bind() {
-    if (el.postType && el.parentPostSelect) {
-      el.postType.addEventListener('change', () => { el.parentPostSelect.disabled = el.postType.value !== 'comment'; });
-      el.parentPostSelect.disabled = true;
-    }
-
     if (el.authorRandom) {
       el.authorHandle.disabled = el.authorRandom.checked;
       el.authorRandom.addEventListener('change', () => {
@@ -541,6 +538,7 @@
         const id = btn.dataset.deletePostId;
         state.posts = state.posts.filter((x) => x.id !== id && x.parentId !== id);
         persistPostAndSuggestions();
+        buildTimeline();
         refresh();
       });
     }
@@ -571,6 +569,98 @@
         persistPostAndSuggestions();
         refresh();
       });
+    }
+
+
+    if (el.adminFeed) {
+      el.adminFeed.addEventListener('click', (e) => {
+        const avatarBtn = e.target.closest('[data-edit-avatar]');
+        if (avatarBtn && el.editAvatarInput) {
+          el.editAvatarInput.dataset.postId = avatarBtn.dataset.editAvatar;
+          el.editAvatarInput.click();
+          return;
+        }
+
+        const textBtn = e.target.closest('[data-edit-text]');
+        if (textBtn) {
+          const id = textBtn.dataset.editText;
+          const post = state.posts.find((x) => x.id === id && x.type === 'post');
+          if (!post) return;
+          const next = window.prompt('Post metnini düzenle:', post.text);
+          if (typeof next === 'string' && next.trim()) {
+            post.text = next.trim();
+            persistPostAndSuggestions();
+            buildTimeline();
+            refresh();
+          }
+          return;
+        }
+
+        const mediaBtn = e.target.closest('[data-edit-media]');
+        if (mediaBtn && el.editMediaInput) {
+          el.editMediaInput.dataset.postId = mediaBtn.dataset.editMedia;
+          el.editMediaInput.click();
+          return;
+        }
+
+        const quick = e.target.closest('[data-quick-comment]');
+        if (quick) {
+          const parentId = quick.dataset.quickComment;
+          const text = window.prompt('Hızlı yorum metni:');
+          if (!text || !text.trim()) return;
+          const parent = state.posts.find((x) => x.id === parentId && x.type === 'post');
+          if (!parent) return;
+          state.posts.push({
+            id: uid(),
+            type: 'comment',
+            parentId,
+            author: pickRandomNick(),
+            authorAvatar: '',
+            text: text.trim(),
+            media: '',
+            mediaType: 'image',
+            carousel: [],
+            timestampSec: Number.isFinite(parent.timestampSec) ? parent.timestampSec + 0.6 + (commentsFor(parentId).length * 0.8) : null,
+            sponsored: false,
+            vip: false,
+            boosted: false,
+            likes: 0,
+            reposts: 0,
+            createdAt: Date.now(),
+          });
+          persistPostAndSuggestions();
+          buildTimeline();
+          refresh();
+        }
+      });
+
+      if (el.editAvatarInput) {
+        el.editAvatarInput.addEventListener('change', async () => {
+          const id = el.editAvatarInput.dataset.postId;
+          const post = state.posts.find((x) => x.id === id && x.type === 'post');
+          const file = el.editAvatarInput.files?.[0] || null;
+          if (!post || !file) return;
+          post.authorAvatar = await toDataUrl(file);
+          persistPostAndSuggestions();
+          refresh();
+          el.editAvatarInput.value = '';
+        });
+      }
+
+      if (el.editMediaInput) {
+        el.editMediaInput.addEventListener('change', async () => {
+          const id = el.editMediaInput.dataset.postId;
+          const post = state.posts.find((x) => x.id === id && x.type === 'post');
+          const file = el.editMediaInput.files?.[0] || null;
+          if (!post || !file) return;
+          post.media = await toDataUrl(file);
+          post.mediaType = file.type.startsWith('video/') ? 'video' : 'image';
+          persistPostAndSuggestions();
+          buildTimeline();
+          refresh();
+          el.editMediaInput.value = '';
+        });
+      }
     }
 
     if (el.musicForm) el.musicForm.addEventListener('submit', (e) => { void onAddTrack(e); });
@@ -653,10 +743,11 @@
       ctx.fillStyle = '#0a0e17';
       ctx.fillRect(0, 0, w, h);
 
-      const bars = 24;
-      const gap = 4;
-      const barW = Math.max(3, Math.floor((w - ((bars - 1) * gap)) / bars));
-      const startX = (w - ((bars * barW) + ((bars - 1) * gap))) / 2;
+      const bars = 18;
+      const gap = 5;
+      const barW = Math.max(4, Math.floor((w - ((bars - 1) * gap)) / bars));
+      const totalW = (bars * barW) + ((bars - 1) * gap);
+      const startX = Math.max(0, (w - totalW) / 2);
       const center = (bars - 1) / 2;
 
       if (visualizer.analyser && visualizer.data) {
@@ -707,6 +798,7 @@
 
   async function init() {
     await loadData();
+    buildTimeline();
     refresh();
     bind();
     initVisualizer();

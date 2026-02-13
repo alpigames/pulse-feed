@@ -19,7 +19,6 @@
         <a href="feed.html"><span class="menu-icon">#</span>Keşfet</a>
         <a href="feed.html"><span class="menu-icon">◉</span>Bildirimler</a>
         <a href="feed.html"><span class="menu-icon">✉</span>Mesajlar</a>
-        <a href="feed.html" class="premium-link"><span class="menu-icon">$</span>Premium</a>
       </nav>
 
       <section class="music-player" aria-label="Müzik çalar">
@@ -29,15 +28,12 @@
           <p id="musicTrackSinger" class="music-track-singer">Singer Name</p>
         </div>
         <select id="musicTrackSelect" class="music-track-select" aria-label="Şarkı seç"></select>
-        <div class="music-time-row">
-          <span id="musicCurrentTime">0:00</span>
-          <span id="musicDuration">0:00</span>
-        </div>
+        <div class="music-time-row"><span id="musicCurrentTime">0:00</span><span id="musicDuration">0:00</span></div>
         <input id="musicProgress" class="music-progress" type="range" min="0" max="100" value="0" />
         <div class="music-player-controls">
-          <button id="musicPrevBtn" type="button" class="player-icon-btn" aria-label="Önceki şarkı">⏮</button>
-          <button id="musicToggleBtn" type="button" class="player-main-btn" aria-label="Çal / Duraklat">▶</button>
-          <button id="musicNextBtn" type="button" class="player-icon-btn" aria-label="Sonraki şarkı">⏭</button>
+          <button id="musicPrevBtn" type="button" class="player-icon-btn">⏮</button>
+          <button id="musicToggleBtn" type="button" class="player-main-btn">▶</button>
+          <button id="musicNextBtn" type="button" class="player-icon-btn">⏭</button>
         </div>
       </section>
     </aside>
@@ -45,37 +41,23 @@
     <main class="app-shell feed-shell">
       <section class="panel" aria-label="Pulse feed mode">
         <div class="feed-controls">
-          <label class="checkbox-line">
-            <input id="autoScrollEnabled" type="checkbox" />
-            Auto-scroll
-          </label>
-
-          <label>
-            Speed
-            <input id="scrollSpeed" type="range" min="10" max="90" value="34" />
-          </label>
-
-          <label class="checkbox-line">
-            <input id="pauseAtPosts" type="checkbox" checked />
-            Pause at posts
-          </label>
-
+          <label class="checkbox-line"><input id="autoScrollEnabled" type="checkbox" /> Auto-scroll</label>
+          <label>Speed<input id="scrollSpeed" type="range" min="10" max="90" value="34" /></label>
+          <label class="checkbox-line"><input id="pauseAtPosts" type="checkbox" checked /> Pause at posts</label>
+          <button id="recordToggleBtn" type="button" class="publish-btn record-btn">● Record</button>
           <a href="admin.html" class="tab-btn">Composer / Admin</a>
         </div>
-
         <section id="feed" class="feed" aria-label="Feed timeline"></section>
       </section>
     </main>
 
     <aside class="sidebar right-sidebar" aria-label="Discover and follow">
       <input id="searchInput" type="text" placeholder="Ara..." class="search-input" />
-      <section class="suggestions">
-        <h3>Takip önerileri</h3>
-        <div id="suggestionsList"></div>
-      </section>
+      <section class="suggestions"><h3>Takip önerileri</h3><div id="suggestionsList"></div></section>
     </aside>
   </div>
 
+  <div id="timelineOverlay" class="timeline-overlay" aria-live="polite"></div>
   <script src="script.js"></script>
 </body>
 </html>

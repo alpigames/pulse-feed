@@ -1,881 +1,242 @@
 (() => {
-  const POSTS_KEY = 'pulseFeedPosts.v5';
+  const POSTS_KEY = 'pulseFeedPosts.v6';
   const SUGGESTIONS_KEY = 'pulseSuggestions.v2';
   const MUSIC_KEY = 'pulseMusicTracks.v1';
-  const MUSIC_DB_NAME = 'pulseFeedDb';
-  const MUSIC_DB_VERSION = 1;
-  const MUSIC_STORE_NAME = 'music';
-  const MUSIC_STORE_KEY = 'tracks';
   const page = document.body.dataset.page || 'admin';
 
-  const state = {
-    posts: [],
-    suggestions: [],
-    tracks: [],
-    currentTrackId: '',
-    autoScroll: false,
-    pauseAtPosts: true,
-    speedPxPerSecond: 34,
-    isPaused: false,
-    pauseUntil: 0,
-    lastTime: performance.now(),
-    loopResetPending: false,
-  };
+  const NICKNAMES = [
+    'DerinAkis','BetonZihin','MaskesizGercek','GriDuvar','AltKatSakin','SogukGercek','DipDalga','KaranlikYorum','Gozlemci34','NabizTutan','IsimsizKayit','SistemArizasi','ArkaSokakVeri','KuleAltindan','YedinciKat','UyariSeviyesi','BuzGibiHakikat','SesKaydi01','CatiKatisi','DuvarArasi','user384920','yorumcu_xx','gercekler123','vatandas_01','milliSes78','haberTakipcisi','objektif_bakis','dogruYorumcu','netKonusan','turkEvladidir','sistemSavunucusu','rastgele_987','anon_kayit','yorumMakinesi','feedKontrol','veri_akisi','trendAvcisi','feedTetik','BodrumdanSes','TesisatciDegil','CatiUstunde','DelikIcinden','BetonAltindan','KilerSakin','DuvarKemirgen','SogukZemin','KatMaliki','KiraciDegil','TapuBizde','IslakDuvar','RutubetliGercek','SarsintiOncesi','ArizaKaydi','EnkazAltindan','PasaSakini','YonetimKatinda','MarkaOrtak','GuvenliYarin','BuyumeUzmani','EkonomiTakip','ResmiAciklama','PRMasasi','KrizYonetimi','KamuBilgi','IletisimOfisi','GuvenilirKaynak','KurumsalSes','DestekHatti','StratejiMasasi','DegerYaratir','IleriVizyon','YerAltiKaydi','SertAkis','DissArsivi','MaskeyiDusur','CizgiDisi','SakinOlmam','HukumGeldi','DefterAcik','KayitDisi','GozDiken','NabizYuksek','TansiyonArtis','DuzenCoktu','SinyalYok','VeriPatladi',
+  ];
 
-  const el = {
-    form: document.getElementById('composerForm'),
-    postText: document.getElementById('postText'),
-    postType: document.getElementById('postType'),
-    parentPostSelect: document.getElementById('parentPostSelect'),
-    mediaFile: document.getElementById('mediaFile'),
-    authorAvatarFile: document.getElementById('authorAvatarFile'),
-    isSponsored: document.getElementById('isSponsored'),
-    isVip: document.getElementById('isVip'),
-    authorHandle: document.getElementById('authorHandle'),
-    feed: document.getElementById('feed'),
-    manageList: document.getElementById('manageList'),
-    suggestionForm: document.getElementById('suggestionForm'),
-    suggestionHandle: document.getElementById('suggestionHandle'),
-    suggestionBio: document.getElementById('suggestionBio'),
-    suggestionAvatarFile: document.getElementById('suggestionAvatarFile'),
-    suggestionManageList: document.getElementById('suggestionManageList'),
-    suggestionsList: document.getElementById('suggestionsList'),
-    searchInput: document.getElementById('searchInput'),
-    autoScrollEnabled: document.getElementById('autoScrollEnabled'),
-    scrollSpeed: document.getElementById('scrollSpeed'),
-    pauseAtPosts: document.getElementById('pauseAtPosts'),
-    musicForm: document.getElementById('musicForm'),
-    musicTitle: document.getElementById('musicTitle'),
-    musicArtist: document.getElementById('musicArtist'),
-    musicFile: document.getElementById('musicFile'),
-    musicManageList: document.getElementById('musicManageList'),
-    musicTrackSelect: document.getElementById('musicTrackSelect'),
-    musicToggleBtn: document.getElementById('musicToggleBtn'),
-    musicPrevBtn: document.getElementById('musicPrevBtn'),
-    musicNextBtn: document.getElementById('musicNextBtn'),
-    musicPlayerStatus: document.getElementById('musicPlayerStatus'),
-    musicVisualizer: document.getElementById('musicVisualizer'),
-    musicTrackTitle: document.getElementById('musicTrackTitle'),
-    musicTrackSinger: document.getElementById('musicTrackSinger'),
-    musicProgress: document.getElementById('musicProgress'),
-    musicCurrentTime: document.getElementById('musicCurrentTime'),
-    musicDuration: document.getElementById('musicDuration'),
-    musicFormNotice: document.getElementById('musicFormNotice'),
-  };
-
+  const state = { posts: [], suggestions: [], tracks: [], currentTrackId: '', autoScroll: false, pauseAtPosts: true, speedPxPerSecond: 34, lastTime: performance.now(), timelineIndex: 0, timelineEvents: [], lastTrackTime: 0, nickPool: [] };
   const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const audioPlayer = new Audio();
-  const visualizer = {
-    audioCtx: null,
-    analyser: null,
-    dataArray: null,
-    source: null,
-    rafId: 0,
-  };
-  let musicDbPromise = null;
+  audioPlayer.loop = false;
 
-  function escapeHtml(str) {
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
+  const el = Object.fromEntries(['composerForm','postText','postType','parentPostSelect','mediaFile','carouselFiles','carouselTimestamps','postTimestamp','authorAvatarFile','authorHandle','authorRandom','isSponsored','isVip','isBoosted','feed','adminFeed','manageList','suggestionForm','suggestionHandle','suggestionBio','suggestionAvatarFile','suggestionManageList','suggestionsList','searchInput','autoScrollEnabled','scrollSpeed','pauseAtPosts','musicForm','musicTitle','musicArtist','musicFile','musicManageList','musicTrackSelect','musicToggleBtn','musicPrevBtn','musicNextBtn','musicTrackTitle','musicTrackSinger','musicPlayerStatus','musicProgress','musicCurrentTime','musicDuration','musicVisualizer','musicFormNotice','timelineOverlay','recordToggleBtn'].map((id) => [id, document.getElementById(id)]));
 
-  function formatTextWithMentions(text) {
-    const safe = escapeHtml(text);
-    return safe.replace(/(^|\s)(@[a-zA-Z0-9_.-]+)/g, '$1<span class="mention">$2</span>');
-  }
+  const esc = (s) => String(s).replace(/[&<>"']/g, (m) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+  const timeAgo = (ts) => `${Math.max(1, Math.floor((Date.now() - ts) / 60000))}m`;
+  const fmt = (v) => { const t=Math.floor(v||0); return `${Math.floor(t/60)}:${String(t%60).padStart(2,'0')}`; };
 
-  function timeAgo(ts) {
-    const diffMin = Math.max(1, Math.floor((Date.now() - ts) / 60000));
-    if (diffMin < 60) return `${diffMin}m`;
-    const h = Math.floor(diffMin / 60);
-    if (h < 24) return `${h}h`;
-    return `${Math.floor(h / 24)}d`;
-  }
+  function seedPosts() { return []; }
+  function seedSuggestions() { return [{ id: uid(), handle: '@blue.artist', bio: 'visual performer', avatar: '' }]; }
 
-
-  function formatAudioTime(seconds) {
-    if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
-    const total = Math.floor(seconds);
-    const min = Math.floor(total / 60);
-    const sec = total % 60;
-    return `${min}:${String(sec).padStart(2, '0')}`;
-  }
-
-  function showMusicNotice(message, type = 'ok') {
-    if (!el.musicFormNotice) return;
-    el.musicFormNotice.textContent = message;
-    el.musicFormNotice.className = `form-notice ${type}`;
-    window.setTimeout(() => {
-      if (el.musicFormNotice && el.musicFormNotice.textContent === message) {
-        el.musicFormNotice.textContent = '';
-        el.musicFormNotice.className = 'form-notice';
-      }
-    }, 2500);
-  }
-
-
-
-  function openMusicDb() {
-    if (!window.indexedDB) return Promise.resolve(null);
-    if (musicDbPromise) return musicDbPromise;
-
-    musicDbPromise = new Promise((resolve, reject) => {
-      const request = indexedDB.open(MUSIC_DB_NAME, MUSIC_DB_VERSION);
-
-      request.onupgradeneeded = () => {
-        const db = request.result;
-        if (!db.objectStoreNames.contains(MUSIC_STORE_NAME)) {
-          db.createObjectStore(MUSIC_STORE_NAME);
-        }
-      };
-
-      request.onsuccess = () => {
-        const db = request.result;
-        db.onversionchange = () => {
-          db.close();
-          musicDbPromise = null;
-        };
-        resolve(db);
-      };
-
-      request.onerror = () => {
-        musicDbPromise = null;
-        reject(request.error || new Error('IndexedDB açılamadı'));
-      };
-    });
-
-    return musicDbPromise;
-  }
-
-  async function loadTracksFromDb() {
-    const db = await openMusicDb();
-    if (!db) return null;
-
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(MUSIC_STORE_NAME, 'readonly');
-      const store = tx.objectStore(MUSIC_STORE_NAME);
-      const request = store.get(MUSIC_STORE_KEY);
-      request.onsuccess = () => {
-        const result = request.result;
-        resolve(Array.isArray(result) ? result : []);
-      };
-      request.onerror = () => reject(request.error || new Error('Şarkılar okunamadı'));
-    });
-  }
-
-  async function saveTracksToDb() {
-    const db = await openMusicDb();
-    if (!db) {
-      try {
-        localStorage.setItem(MUSIC_KEY, JSON.stringify(state.tracks));
-        return true;
-      } catch {
-        return false;
-      }
-    }
-
-    return new Promise((resolve) => {
-      const tx = db.transaction(MUSIC_STORE_NAME, 'readwrite');
-      const store = tx.objectStore(MUSIC_STORE_NAME);
-      store.put(state.tracks, MUSIC_STORE_KEY);
-      tx.oncomplete = () => resolve(true);
-      tx.onerror = () => resolve(false);
-      tx.onabort = () => resolve(false);
-    });
-  }
-
-
-
-  function initVisualizer() {
-    if (!el.musicVisualizer || visualizer.analyser) return;
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtx) return;
-
-    visualizer.audioCtx = new AudioCtx();
-    visualizer.source = visualizer.audioCtx.createMediaElementSource(audioPlayer);
-    visualizer.analyser = visualizer.audioCtx.createAnalyser();
-    visualizer.analyser.fftSize = 128;
-    visualizer.source.connect(visualizer.analyser);
-    visualizer.analyser.connect(visualizer.audioCtx.destination);
-    visualizer.dataArray = new Uint8Array(visualizer.analyser.frequencyBinCount);
-    drawVisualizer();
-  }
-
-  function drawVisualizer() {
-    if (!el.musicVisualizer) return;
-    const canvas = el.musicVisualizer;
-    const rect = canvas.getBoundingClientRect();
-    const width = Math.max(1, Math.floor(rect.width));
-    const height = Math.max(1, Math.floor(rect.height));
-    if (canvas.width != width || canvas.height != height) {
-      canvas.width = width;
-      canvas.height = height;
-    }
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    ctx.fillStyle = '#0a0e17';
-    ctx.fillRect(0, 0, width, height);
-
-    const targetBarCount = 22;
-    const gap = 3;
-    const barWidth = 5;
-    const sidePadding = 2 * (barWidth + gap);
-    const maxClusterWidth = Math.max(barWidth, width - (sidePadding * 2));
-    const fitBarCount = Math.max(1, Math.floor((maxClusterWidth + gap) / (barWidth + gap)));
-    const barCount = Math.min(targetBarCount, fitBarCount);
-    const clusterWidth = (barCount * barWidth) + ((barCount - 1) * gap);
-    const startX = Math.max(sidePadding, (width - clusterWidth) / 2);
-    const centerY = height / 2;
-
-    if (visualizer.analyser && visualizer.dataArray) {
-      visualizer.analyser.getByteFrequencyData(visualizer.dataArray);
-    }
-
-    const centerIndex = (barCount - 1) / 2;
-
-    for (let i = 0; i < barCount; i += 1) {
-      const value = visualizer.dataArray ? visualizer.dataArray[i % visualizer.dataArray.length] / 255 : 0;
-      const idle = audioPlayer.paused ? 0.08 : 0.16;
-      const amplitude = (value * (audioPlayer.paused ? 0.45 : 1)) + idle;
-      const distanceFromCenter = Math.abs(i - centerIndex) / Math.max(1, centerIndex);
-      const centerWeight = 1 - (distanceFromCenter ** 1.35);
-      const envelope = 0.35 + (0.65 * centerWeight);
-      const edgeIndex = Math.min(i, barCount - 1 - i) + 1;
-      let positionalScale = 1;
-      if (edgeIndex === 4 || edgeIndex === 8) positionalScale = 0.9;
-      else if (edgeIndex === 5 || edgeIndex === 7) positionalScale = 0.8;
-      else if (edgeIndex === 6) positionalScale = 0.7;
-      const halfHeight = Math.max(2.0, amplitude * envelope * positionalScale * height * 0.167);
-      const x = startX + (i * (barWidth + gap));
-      const y = centerY - halfHeight;
-      const gradient = ctx.createLinearGradient(0, y, 0, centerY + halfHeight);
-      gradient.addColorStop(0, '#9cb6ff');
-      gradient.addColorStop(1, '#41527e');
-      ctx.fillStyle = gradient;
-      ctx.fillRect(x, y, barWidth, halfHeight * 2);
-    }
-
-    visualizer.rafId = requestAnimationFrame(drawVisualizer);
-  }
-
-  function avatarFor(author) {
-    const seed = encodeURIComponent(String(author).replace('@', ''));
-    return `https://api.dicebear.com/9.x/thumbs/svg?seed=${seed}`;
-  }
-
-  function seedPosts() {
-    const now = Date.now();
-    const p1 = uid();
-    const p2 = uid();
-    return [
-      {
-        id: p1,
-        type: 'post',
-        author: '@nova.wave',
-        authorAvatar: '',
-        subMeta: 'visual rehearsal',
-        text: 'Yeni editte @mono.synth ile ortak deneme yaptık. Gece çekimi için hazır.',
-        sponsored: false,
-        media: '',
-        createdAt: now - 1000 * 60 * 12,
-        pauseMs: 2400,
-        parentId: null,
-      },
-      {
-        id: p2,
-        type: 'post',
-        author: '@arc.light',
-        authorAvatar: '',
-        subMeta: 'loop tools',
-        text: 'Bu bir tanıtım gönderisidir. @studio.pulse için yeni görsel paket çıktı.',
-        sponsored: true,
-        media: '',
-        createdAt: now - 1000 * 60 * 10,
-        pauseMs: 2800,
-        parentId: null,
-      },
-      {
-        id: uid(),
-        type: 'comment',
-        author: '@grainframe',
-        authorAvatar: '',
-        subMeta: 'studio notes',
-        text: '@nova.wave palet çok iyi duruyor.',
-        sponsored: false,
-        media: '',
-        createdAt: now - 1000 * 60 * 8,
-        pauseMs: 0,
-        parentId: p1,
-      },
-    ];
-  }
-
-  function seedSuggestions() {
-    return [
-      { id: uid(), handle: '@blue.artist', bio: 'visual performer', avatar: '' },
-      { id: uid(), handle: '@ghost.user', bio: 'night cuts', avatar: '' },
-      { id: uid(), handle: '@mono.synth', bio: 'audio textures', avatar: '' },
-    ];
-  }
-
-  function seedTracks() {
-    return [];
-  }
-
-  async function loadData() {
-    try {
-      state.posts = JSON.parse(localStorage.getItem(POSTS_KEY) || 'null') || seedPosts();
-    } catch {
-      state.posts = seedPosts();
-    }
-
-    try {
-      state.suggestions = JSON.parse(localStorage.getItem(SUGGESTIONS_KEY) || 'null') || seedSuggestions();
-    } catch {
-      state.suggestions = seedSuggestions();
-    }
-
-    let tracksLoaded = false;
-    try {
-      const dbTracks = await loadTracksFromDb();
-      if (Array.isArray(dbTracks)) {
-        state.tracks = dbTracks;
-        tracksLoaded = true;
-      }
-    } catch {
-      tracksLoaded = false;
-    }
-
-    if (!tracksLoaded) {
-      try {
-        state.tracks = JSON.parse(localStorage.getItem(MUSIC_KEY) || 'null') || seedTracks();
-      } catch {
-        state.tracks = seedTracks();
-      }
-
-      const migrated = await saveTracksToDb();
-      if (migrated) {
-        localStorage.removeItem(MUSIC_KEY);
-      }
-    }
-
-    state.tracks = state.tracks.map((track) => ({
-      ...track,
-      artist: track.artist || 'Unknown Artist',
-    }));
-
-    state.posts = state.posts.map((post) => ({
-      ...post,
-      vip: Boolean(post.vip),
-    }));
-
+  function save() { localStorage.setItem(POSTS_KEY, JSON.stringify(state.posts)); localStorage.setItem(SUGGESTIONS_KEY, JSON.stringify(state.suggestions)); localStorage.setItem(MUSIC_KEY, JSON.stringify(state.tracks)); }
+  function load() {
+    state.posts = JSON.parse(localStorage.getItem(POSTS_KEY) || 'null') || seedPosts();
+    state.suggestions = JSON.parse(localStorage.getItem(SUGGESTIONS_KEY) || 'null') || seedSuggestions();
+    state.tracks = JSON.parse(localStorage.getItem(MUSIC_KEY) || 'null') || [];
     state.currentTrackId = state.tracks[0]?.id || '';
-
-    persistPosts();
-    persistSuggestions();
+    state.nickPool = [...NICKNAMES];
   }
 
-  const persistPosts = () => localStorage.setItem(POSTS_KEY, JSON.stringify(state.posts));
-  const persistSuggestions = () => localStorage.setItem(SUGGESTIONS_KEY, JSON.stringify(state.suggestions));
-  async function persistTracks() {
-    const ok = await saveTracksToDb();
-    if (ok && window.indexedDB) {
-      localStorage.removeItem(MUSIC_KEY);
-    }
-    return ok;
+  const posts = () => state.posts.filter((x) => x.type === 'post').sort((a,b)=>a.createdAt-b.createdAt);
+  const comments = (id) => state.posts.filter((x) => x.type === 'comment' && x.parentId === id).sort((a,b)=>a.createdAt-b.createdAt);
+
+  function renderParentOptions() { if (!el.parentPostSelect) return; el.parentPostSelect.innerHTML = '<option value="">None</option>' + posts().map((p)=>`<option value="${p.id}">${esc(p.author)} · ${esc(p.text.slice(0,20))}</option>`).join(''); }
+
+  function mediaNode(item, cls='media') {
+    if (!item?.src) return '';
+    return item.mediaType === 'video' ? `<video class="${cls}" src="${item.src}" muted playsinline controls></video>` : `<img class="${cls}" src="${item.src}" alt="media" />`;
   }
 
-  const getPosts = () => state.posts.filter((x) => x.type === 'post').sort((a, b) => a.createdAt - b.createdAt);
-  const getCommentsFor = (postId) => state.posts.filter((x) => x.type === 'comment' && x.parentId === postId).sort((a, b) => a.createdAt - b.createdAt);
-
-  function renderParentOptions() {
-    if (!el.parentPostSelect) return;
-    const options = ['<option value="">None</option>'];
-    for (const post of getPosts()) {
-      const shortText = escapeHtml(post.text.slice(0, 20));
-      options.push(`<option value="${post.id}">${escapeHtml(post.author)} · ${shortText}${post.text.length > 20 ? '…' : ''}</option>`);
-    }
-    el.parentPostSelect.innerHTML = options.join('');
-  }
-
-  function renderFeed() {
-    if (!el.feed) return;
-    const posts = getPosts();
-    if (!posts.length) {
-      el.feed.innerHTML = '<div class="empty-feed">No posts yet.</div>';
-      return;
-    }
-
-    el.feed.innerHTML = posts.map((post) => {
-      const comments = getCommentsFor(post.id);
-      const media = post.media ? `<div class="media-wrap"><img class="media" src="${post.media}" alt="Attached media" /></div>` : '';
-      const avatar = post.authorAvatar || avatarFor(post.author);
-      const commentsHtml = comments.length
-        ? `<section class="comments">${comments.map((c) => `<p class="comment"><strong>${escapeHtml(c.author)}</strong> · <span class="timestamp">${timeAgo(c.createdAt)}</span><br>${formatTextWithMentions(c.text)}</p>`).join('')}</section>`
-        : '<section class="comments"></section>';
-
-      return `<article class="post-card ${post.sponsored ? 'sponsored-card' : ''}" data-pause="${post.pauseMs || 0}">
-        <header class="post-head">
-          <img class="avatar" src="${avatar}" alt="${escapeHtml(post.author)} avatar" />
-          <div>
-            <p class="meta-row"><span class="username">${escapeHtml(post.author)}</span>${post.vip ? ' <span class="vip-badge" aria-label="VIP"><span class="vip-badge-ring"><span class="vip-pulse-icon" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></span></span>' : ''} <span class="timestamp">· ${timeAgo(post.createdAt)}</span></p>
-            <p class="sub-meta">${escapeHtml(post.subMeta || 'music video drafts')}</p>
-          </div>
-          ${post.sponsored ? '<span class="sponsored-label">Sponsored</span>' : ''}
-        </header>
-        <p class="post-text">${formatTextWithMentions(post.text)}</p>
-        ${media}
-        <footer class="post-actions" aria-hidden="true">
-          <span>♡ ${Math.floor(Math.random() * 900 + 25)}</span>
-          <span>💬 ${comments.length}</span>
-          <span>↺ ${Math.floor(Math.random() * 70 + 3)}</span>
-        </footer>
-        ${commentsHtml}
-      </article>`;
+  function renderFeed(target) {
+    if (!target) return;
+    const list = posts();
+    target.innerHTML = !list.length ? '<div class="empty-feed">No posts yet.</div>' : list.map((p) => {
+      const c = comments(p.id);
+      return `<article class="post-card"><header class="post-head"><p class="meta-row"><strong>${esc(p.author)}</strong> <span class="timestamp">· ${timeAgo(p.createdAt)}</span></p></header><p class="post-text">${esc(p.text)}</p>${mediaNode({src:p.media,mediaType:p.mediaType})}${p.carousel?.length ? `<div class="carousel-preview">${p.carousel.map((it)=>`<span>${it.mediaType==='video'?'🎬':'🖼'} ${Number(it.timestampSec||0)}s</span>`).join('')}</div>`:''}<div class="post-actions"><span>❤ ${p.likes||0}</span><span>↻ ${p.reposts||0}</span></div>${c.length?`<section class="comments">${c.map((x)=>`<p class="comment"><strong>${esc(x.author)}</strong>: ${esc(x.text)}</p>`).join('')}</section>`:''}</article>`;
     }).join('');
   }
 
   function renderManageList() {
     if (!el.manageList) return;
-    const sorted = [...state.posts].sort((a, b) => b.createdAt - a.createdAt);
-    el.manageList.innerHTML = sorted.map((item) => `<div class="manage-item">
-      <div>
-        <p><strong>${escapeHtml(item.author)}</strong>${item.vip ? ' <span class=\"vip-tag\">VIP</span>' : ''} · <span>${item.type.toUpperCase()}</span> · <small>${timeAgo(item.createdAt)}</small></p>
-        <small>${escapeHtml(item.text.slice(0, 80))}${item.text.length > 80 ? '…' : ''}</small>
-      </div>
-      <button class="delete-btn" type="button" data-delete-post-id="${item.id}">Delete</button>
-    </div>`).join('');
+    el.manageList.innerHTML = state.posts.sort((a,b)=>b.createdAt-a.createdAt).map((item) => `<div class="manage-item"><div><p><strong>${esc(item.author)}</strong> · ${item.type}</p><small>${esc(item.text.slice(0,70))}</small></div><button class="delete-btn" data-delete-post-id="${item.id}">Delete</button></div>`).join('');
   }
 
   function renderSuggestions() {
     if (!el.suggestionsList) return;
-    const query = (el.searchInput?.value || '').trim().toLowerCase();
-    const list = state.suggestions.filter((s) => !query || s.handle.toLowerCase().includes(query) || s.bio.toLowerCase().includes(query));
-
-    el.suggestionsList.innerHTML = list.map((s) => {
-      const avatar = s.avatar || avatarFor(s.handle);
-      return `<article class="suggestion-item">
-        <img src="${avatar}" alt="${escapeHtml(s.handle)} avatar" class="avatar mini" />
-        <div>
-          <p><strong>${escapeHtml(s.handle)}</strong></p>
-          <small>${escapeHtml(s.bio)}</small>
-        </div>
-        <button type="button">Takip et</button>
-      </article>`;
-    }).join('');
+    const q=(el.searchInput?.value||'').toLowerCase();
+    el.suggestionsList.innerHTML = state.suggestions.filter((s)=>!q||s.handle.toLowerCase().includes(q)).map((s)=>`<article class="suggestion-item"><div><p><strong>${esc(s.handle)}</strong></p><small>${esc(s.bio)}</small></div></article>`).join('');
   }
-
-  function renderSuggestionManager() {
-    if (!el.suggestionManageList) return;
-    el.suggestionManageList.innerHTML = state.suggestions.map((s) => `<div class="manage-item">
-      <div>
-        <p><strong>${escapeHtml(s.handle)}</strong></p>
-        <small>${escapeHtml(s.bio)}</small>
-      </div>
-      <button class="delete-btn" type="button" data-delete-suggestion-id="${s.id}">Delete</button>
-    </div>`).join('');
-  }
+  function renderSuggestionManager() { if (!el.suggestionManageList) return; el.suggestionManageList.innerHTML = state.suggestions.map((s)=>`<div class="manage-item"><div><strong>${esc(s.handle)}</strong></div><button class="delete-btn" data-delete-suggestion-id="${s.id}">Delete</button></div>`).join(''); }
 
   function renderTrackSelect() {
     if (!el.musicTrackSelect) return;
-
-    if (!state.tracks.length) {
-      el.musicTrackSelect.innerHTML = '<option value="">Şarkı yok</option>';
-      if (el.musicPlayerStatus) el.musicPlayerStatus.textContent = 'Henüz şarkı yüklenmedi';
-      if (el.musicToggleBtn) {
-        el.musicToggleBtn.disabled = true;
-        el.musicToggleBtn.textContent = '▶';
-      }
-      if (el.musicTrackTitle) el.musicTrackTitle.textContent = 'Song';
-      if (el.musicTrackSinger) el.musicTrackSinger.textContent = 'Singer Name';
-      if (el.musicCurrentTime) el.musicCurrentTime.textContent = '0:00';
-      if (el.musicDuration) el.musicDuration.textContent = '0:00';
-      if (el.musicProgress) el.musicProgress.value = '0';
-      return;
-    }
-
-    el.musicTrackSelect.innerHTML = state.tracks.map((track) => `<option value="${track.id}">${escapeHtml(track.title)} · ${escapeHtml(track.artist || 'Unknown Artist')}</option>`).join('');
-
-    if (!state.currentTrackId || !state.tracks.some((x) => x.id === state.currentTrackId)) {
-      state.currentTrackId = state.tracks[0].id;
-    }
-
-    el.musicTrackSelect.value = state.currentTrackId;
-    if (el.musicPlayerStatus) el.musicPlayerStatus.textContent = audioPlayer.paused ? 'Hazır' : 'Çalıyor';
-    if (el.musicToggleBtn) {
-      el.musicToggleBtn.disabled = false;
-      el.musicToggleBtn.textContent = audioPlayer.paused ? '▶' : '❚❚';
-    }
-  }
-
-  function renderTrackManager() {
-    if (!el.musicManageList) return;
-    el.musicManageList.innerHTML = state.tracks.map((track) => `<div class="manage-item">
-      <div>
-        <p><strong>${escapeHtml(track.title)}</strong></p>
-        <small>${escapeHtml(track.artist || 'Unknown Artist')}</small>
-      </div>
-      <button class="delete-btn" type="button" data-delete-track-id="${track.id}">Delete</button>
-    </div>`).join('');
-  }
-
-  function applySelectedTrack(trackId) {
-    const track = state.tracks.find((x) => x.id === trackId);
-    if (!track) return;
-    state.currentTrackId = track.id;
-    audioPlayer.src = track.src;
-    audioPlayer.load();
-    if (el.musicPlayerStatus) el.musicPlayerStatus.textContent = `${track.title} hazır`;
-    if (el.musicToggleBtn) el.musicToggleBtn.textContent = '▶';
-    if (el.musicTrackTitle) el.musicTrackTitle.textContent = track.title;
-    if (el.musicTrackSinger) el.musicTrackSinger.textContent = track.artist || 'Unknown Artist';
-    if (el.musicCurrentTime) el.musicCurrentTime.textContent = '0:00';
-    if (el.musicDuration) el.musicDuration.textContent = '0:00';
-    if (el.musicProgress) el.musicProgress.value = '0';
+    el.musicTrackSelect.innerHTML = state.tracks.length ? state.tracks.map((t)=>`<option value="${t.id}">${esc(t.title)} · ${esc(t.artist)}</option>`).join('') : '<option value="">Şarkı yok</option>';
+    if (state.currentTrackId) el.musicTrackSelect.value = state.currentTrackId;
   }
 
   function refresh() {
-    renderParentOptions();
-    renderFeed();
-    renderManageList();
-    renderSuggestions();
-    renderSuggestionManager();
-    renderTrackSelect();
-    renderTrackManager();
+    renderParentOptions(); renderFeed(el.feed); renderFeed(el.adminFeed); renderManageList(); renderSuggestions(); renderSuggestionManager(); renderTrackSelect();
+    buildTimeline();
   }
 
-  function toDataUrl(file) {
-    return new Promise((resolve, reject) => {
-      if (!file) {
-        resolve('');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result));
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
+  function pickRandomNick() {
+    if (!state.nickPool.length) state.nickPool = [...NICKNAMES];
+    const i = Math.floor(Math.random() * state.nickPool.length);
+    return `@${state.nickPool.splice(i, 1)[0]}`;
   }
 
-  async function onPublish(event) {
-    event.preventDefault();
-    const text = el.postText.value.trim();
-    if (!text) return;
+  const toDataUrl = (file) => new Promise((res, rej) => { if (!file) return res(''); const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = rej; r.readAsDataURL(file); });
 
+  async function onPublish(e) {
+    e.preventDefault();
+    const text = el.postText.value.trim(); if (!text) return;
     const type = el.postType.value;
     const parentId = type === 'comment' ? (el.parentPostSelect.value || null) : null;
-    if (type === 'comment' && !parentId) {
-      alert('Please select a parent post for comments.');
-      return;
-    }
+    const mediaFile = el.mediaFile.files?.[0] || null;
+    const media = await toDataUrl(mediaFile);
+    const mediaType = mediaFile?.type.startsWith('video/') ? 'video' : 'image';
+    const avatar = await toDataUrl(el.authorAvatarFile.files?.[0] || null);
 
-    const media = await toDataUrl(el.mediaFile.files?.[0] || null);
-    const authorAvatar = await toDataUrl(el.authorAvatarFile?.files?.[0] || null);
+    const carouselFiles = Array.from(el.carouselFiles?.files || []);
+    const stampList = (el.carouselTimestamps?.value || '').split(',').map((x) => Number(x.trim())).filter((x) => Number.isFinite(x));
+    const carousel = [];
+    for (let i = 0; i < carouselFiles.length; i += 1) {
+      const f = carouselFiles[i];
+      carousel.push({ src: await toDataUrl(f), mediaType: f.type.startsWith('video/') ? 'video' : 'image', timestampSec: stampList[i] ?? null });
+    }
 
     state.posts.push({
-      id: uid(),
-      type,
-      author: (el.authorHandle.value.trim() || '@studio.pulse').replace(/\s+/g, ''),
-      authorAvatar,
-      subMeta: 'music video draft',
-      text,
-      sponsored: Boolean(el.isSponsored.checked),
-      vip: Boolean(el.isVip?.checked),
-      media,
-      createdAt: Date.now(),
-      pauseMs: type === 'post' ? 2200 : 0,
-      parentId,
+      id: uid(), type, parentId,
+      author: (el.authorRandom?.checked ? pickRandomNick() : (el.authorHandle.value.trim() || '@studio.pulse')),
+      authorAvatar: avatar, text, media, mediaType, carousel,
+      timestampSec: Number(el.postTimestamp?.value || NaN),
+      sponsored: Boolean(el.isSponsored.checked), vip: Boolean(el.isVip.checked), boosted: Boolean(el.isBoosted.checked),
+      likes: 12, reposts: 3, createdAt: Date.now(),
     });
-
-    persistPosts();
-    refresh();
-
-    el.form.reset();
-    el.authorHandle.value = '@studio.pulse';
+    save(); refresh(); el.composerForm.reset(); if (el.authorRandom) el.authorRandom.checked = true; if (el.authorHandle) el.authorHandle.value = '@studio.pulse';
   }
 
-  function deletePostOrComment(id) {
-    const item = state.posts.find((x) => x.id === id);
-    if (!item) return;
+  async function onAddTrack(e) { e.preventDefault(); const file=el.musicFile.files?.[0]; if (!file) return; const track = { id: uid(), title: el.musicTitle.value.trim(), artist: el.musicArtist.value.trim(), src: await toDataUrl(file) }; state.tracks.unshift(track); state.currentTrackId = track.id; save(); refresh(); el.musicForm.reset(); applyTrack(track.id); }
+  function applyTrack(id) { const t=state.tracks.find((x)=>x.id===id); if (!t) return; state.currentTrackId=id; audioPlayer.src=t.src; if (el.musicTrackTitle) el.musicTrackTitle.textContent=t.title; if (el.musicTrackSinger) el.musicTrackSinger.textContent=t.artist; }
+  async function togglePlayback() { if (!audioPlayer.src) applyTrack(el.musicTrackSelect?.value || state.currentTrackId); if (!audioPlayer.src) return; if (audioPlayer.paused) { await audioPlayer.play(); autoRecordStart(); } else { audioPlayer.pause(); autoRecordStop(); } if (el.musicToggleBtn) el.musicToggleBtn.textContent = audioPlayer.paused ? '▶' : '❚❚'; }
 
-    state.posts = item.type === 'post'
-      ? state.posts.filter((x) => x.id !== id && x.parentId !== id)
-      : state.posts.filter((x) => x.id !== id);
-
-    persistPosts();
-    refresh();
+  function buildTimeline() {
+    const events = [];
+    for (const p of posts()) {
+      if (Number.isFinite(p.timestampSec)) events.push({ ts: p.timestampSec, kind: 'post', post: p });
+      for (const c of comments(p.id)) if (Number.isFinite(c.timestampSec)) events.push({ ts: c.timestampSec, kind: 'comment', post: p, comment: c });
+      (p.carousel || []).forEach((it, idx) => { if (Number.isFinite(it.timestampSec)) events.push({ ts: it.timestampSec, kind: 'carousel', post: p, item: it, idx }); });
+    }
+    state.timelineEvents = events.sort((a,b)=>a.ts-b.ts);
+    state.timelineIndex = 0;
   }
 
-  async function onAddSuggestion(event) {
-    event.preventDefault();
-    const handle = el.suggestionHandle.value.trim();
-    const bio = el.suggestionBio.value.trim();
-    if (!handle || !bio) return;
-
-    const avatar = await toDataUrl(el.suggestionAvatarFile?.files?.[0] || null);
-    const normalized = handle.startsWith('@') ? handle : `@${handle}`;
-
-    state.suggestions.unshift({ id: uid(), handle: normalized, bio, avatar });
-    persistSuggestions();
-    renderSuggestions();
-    renderSuggestionManager();
-    el.suggestionForm.reset();
+  let overlayTimer = 0; let boostTimer = 0;
+  function showOverlay(html, duration=1400) {
+    if (!el.timelineOverlay || page !== 'feed') return;
+    clearTimeout(overlayTimer); clearInterval(boostTimer);
+    el.timelineOverlay.innerHTML = `<div class="timeline-modal open">${html}</div>`;
+    overlayTimer = setTimeout(() => { if (el.timelineOverlay) el.timelineOverlay.innerHTML = ''; }, duration);
   }
 
-  function deleteSuggestion(id) {
-    state.suggestions = state.suggestions.filter((x) => x.id !== id);
-    persistSuggestions();
-    renderSuggestions();
-    renderSuggestionManager();
-  }
-
-  async function onAddTrack(event) {
-    event.preventDefault();
-    const title = el.musicTitle?.value.trim();
-    const artist = el.musicArtist?.value.trim();
-    const file = el.musicFile?.files?.[0] || null;
-    if (!title || !artist || !file) {
-      showMusicNotice('Lütfen tüm alanları doldurun.', 'error');
+  function triggerEvent(ev, nextTs) {
+    const dur = Math.max(350, ((nextTs ?? (ev.ts + 1.8)) - ev.ts) * 1000 - 60);
+    if (ev.kind === 'carousel') {
+      showOverlay(`<div class="timeline-head">Kaydırmalı post</div>${mediaNode(ev.item, 'timeline-media')}<p>${esc(ev.post.text)}</p>`, dur);
       return;
     }
-
-    const src = await toDataUrl(file);
-    const track = { id: uid(), title, artist, src, createdAt: Date.now() };
-    state.tracks = [track, ...state.tracks];
-    state.currentTrackId = track.id;
-
-    if (!(await persistTracks())) {
-      state.tracks = state.tracks.filter((x) => x.id !== track.id);
-      state.currentTrackId = state.tracks[0]?.id || '';
-      showMusicNotice('Şarkı kaydedilemedi. Tarayıcı depolaması dolu olabilir.', 'error');
+    if (ev.kind === 'comment') {
+      const p = ev.post;
+      showOverlay(`<div class="timeline-head">Yorum akışı</div><div class="expand-box"><p>${esc(p.text)}</p><div class="comment-bubble"><span>💬</span><strong>${esc(ev.comment.author)}</strong><p>${esc(ev.comment.text)}</p></div></div>`, dur);
       return;
     }
-
-    showMusicNotice('Şarkı eklendi.', 'ok');
-    refresh();
-    applySelectedTrack(track.id);
-    el.musicForm.reset();
-  }
-
-  async function deleteTrack(id) {
-    const snapshot = state.tracks;
-    const previousTrackId = state.currentTrackId;
-    const isCurrent = state.currentTrackId === id;
-    state.tracks = state.tracks.filter((x) => x.id !== id);
-    if (!state.tracks.length) {
-      state.currentTrackId = '';
-      audioPlayer.pause();
-      audioPlayer.removeAttribute('src');
-      audioPlayer.load();
-    } else if (isCurrent) {
-      applySelectedTrack(state.tracks[0].id);
-    }
-    if (!(await persistTracks())) {
-      state.tracks = snapshot;
-      state.currentTrackId = previousTrackId;
-      showMusicNotice('Şarkı silinirken kayıt hatası oluştu.', 'error');
+    const p = ev.post;
+    if (p.boosted) {
+      showOverlay(`<div class="timeline-head">Trend Patlaması</div><h2>${esc(p.text)}</h2><p id="boostCounts">❤ ${p.likes} · ↻ ${p.reposts}</p>`, dur);
+      let l = p.likes; let r = p.reposts;
+      boostTimer = setInterval(() => { l += Math.floor(Math.random()*22)+8; r += Math.floor(Math.random()*11)+4; const n=document.getElementById('boostCounts'); if (n) n.textContent = `❤ ${l} · ↻ ${r}`; }, 90);
       return;
     }
-    refresh();
+    const media = p.mediaType === 'video' ? `<video class="timeline-media" src="${p.media}" autoplay muted controls></video>` : mediaNode({src:p.media,mediaType:p.mediaType}, 'timeline-media');
+    showOverlay(`<div class="timeline-head">Zaman damgalı post</div><h3>${esc(p.author)}</h3><p>${esc(p.text)}</p>${media}`, dur);
   }
 
-  async function togglePlayback() {
-    if (!state.tracks.length) return;
-    const selectedId = el.musicTrackSelect?.value || state.currentTrackId;
-    if (!audioPlayer.src || state.currentTrackId !== selectedId) {
-      applySelectedTrack(selectedId);
+  function processTimeline() {
+    if (page !== 'feed' || audioPlayer.paused) return;
+    const t = audioPlayer.currentTime;
+    if (t + 0.3 < state.lastTrackTime) {
+      state.timelineIndex = state.timelineEvents.findIndex((x) => x.ts > t - 0.01);
+      if (state.timelineIndex < 0) state.timelineIndex = state.timelineEvents.length;
     }
-
-    if (audioPlayer.paused) {
-      try {
-        initVisualizer();
-        if (visualizer.audioCtx?.state === 'suspended') await visualizer.audioCtx.resume();
-        await audioPlayer.play();
-        if (el.musicPlayerStatus) el.musicPlayerStatus.textContent = 'Çalıyor';
-        if (el.musicToggleBtn) el.musicToggleBtn.textContent = '❚❚';
-      } catch {
-        if (el.musicPlayerStatus) el.musicPlayerStatus.textContent = 'Tarayıcı ses oynatmayı engelledi';
-      }
-      return;
+    while (state.timelineIndex < state.timelineEvents.length && state.timelineEvents[state.timelineIndex].ts <= t + 0.05) {
+      const ev = state.timelineEvents[state.timelineIndex];
+      const nextTs = state.timelineEvents[state.timelineIndex + 1]?.ts;
+      triggerEvent(ev, nextTs);
+      state.timelineIndex += 1;
     }
-
-    audioPlayer.pause();
-    if (el.musicPlayerStatus) el.musicPlayerStatus.textContent = 'Duraklatıldı';
-    if (el.musicToggleBtn) el.musicToggleBtn.textContent = '▶';
+    state.lastTrackTime = t;
   }
 
-  function maybePauseAtPost(now) {
-    if (!state.pauseAtPosts || page !== 'feed') return;
-    const cards = Array.from(document.querySelectorAll('.post-card'));
-    for (const card of cards) {
-      if (card.dataset.paused === '1') continue;
-      const pauseMs = Number(card.dataset.pause || 0);
-      if (!pauseMs) continue;
-      const rect = card.getBoundingClientRect();
-      if (rect.top >= 70 && rect.top <= 160) {
-        card.dataset.paused = '1';
-        state.isPaused = true;
-        state.pauseUntil = now + pauseMs;
-        break;
-      }
-    }
+  let recorder = null; let recordedChunks = []; let recordStream = null;
+  async function startRecording() {
+    if (recorder) return;
+    try {
+      recordStream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 60, width: 3840, height: 2160 }, audio: true });
+      recorder = new MediaRecorder(recordStream, { mimeType: 'video/webm;codecs=vp9' });
+      recordedChunks = [];
+      recorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
+      recorder.onstop = () => {
+        const blob = new Blob(recordedChunks, { type: 'video/webm' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob); a.download = `pulse-feed-${Date.now()}.webm`; a.click();
+        recordStream?.getTracks().forEach((tr) => tr.stop());
+        recorder = null; recordStream = null; if (el.recordToggleBtn) el.recordToggleBtn.textContent = '● Record';
+      };
+      recorder.start(250);
+      if (el.recordToggleBtn) el.recordToggleBtn.textContent = '■ Stop';
+    } catch {}
   }
+  function stopRecording() { if (recorder && recorder.state !== 'inactive') recorder.stop(); }
+  const autoRecordStart = () => { if (page === 'feed') void startRecording(); };
+  const autoRecordStop = () => { if (page === 'feed') stopRecording(); };
 
-  function maybeResetLoop() {
-    if (state.loopResetPending || page !== 'feed') return;
-    const nearEnd = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4;
-    if (!nearEnd) return;
-
-    state.loopResetPending = true;
-    window.setTimeout(() => {
-      document.querySelectorAll('.post-card').forEach((card) => delete card.dataset.paused);
-      window.scrollTo({ top: 0, behavior: 'auto' });
-      state.loopResetPending = false;
-    }, 900);
+  function bind() {
+    if (el.postType) { el.postType.addEventListener('change', () => { el.parentPostSelect.disabled = el.postType.value !== 'comment'; }); el.parentPostSelect.disabled = true; }
+    if (el.authorRandom) el.authorRandom.addEventListener('change', () => { el.authorHandle.disabled = el.authorRandom.checked; });
+    if (el.composerForm) el.composerForm.addEventListener('submit', onPublish);
+    if (el.manageList) el.manageList.addEventListener('click', (e)=>{ const b=e.target.closest('[data-delete-post-id]'); if(!b) return; state.posts=state.posts.filter((x)=>x.id!==b.dataset.deletePostId && x.parentId!==b.dataset.deletePostId); save(); refresh(); });
+    if (el.suggestionForm) el.suggestionForm.addEventListener('submit', async (e)=>{ e.preventDefault(); const handle=el.suggestionHandle.value.trim(); if(!handle) return; state.suggestions.unshift({ id: uid(), handle: handle.startsWith('@')?handle:`@${handle}`, bio: el.suggestionBio.value.trim(), avatar: await toDataUrl(el.suggestionAvatarFile.files?.[0]||null) }); save(); refresh(); el.suggestionForm.reset(); });
+    if (el.suggestionManageList) el.suggestionManageList.addEventListener('click', (e)=>{ const b=e.target.closest('[data-delete-suggestion-id]'); if(!b) return; state.suggestions=state.suggestions.filter((x)=>x.id!==b.dataset.deleteSuggestionId); save(); refresh(); });
+    if (el.musicForm) el.musicForm.addEventListener('submit', onAddTrack);
+    if (el.musicManageList) el.musicManageList.addEventListener('click', (e)=>{ const b=e.target.closest('[data-delete-track-id]'); if(!b) return; state.tracks=state.tracks.filter((x)=>x.id!==b.dataset.deleteTrackId); if(state.currentTrackId===b.dataset.deleteTrackId){state.currentTrackId=state.tracks[0]?.id||''; if(state.currentTrackId) applyTrack(state.currentTrackId);} save(); refresh(); });
+    if (el.musicTrackSelect) el.musicTrackSelect.addEventListener('change', ()=>applyTrack(el.musicTrackSelect.value));
+    if (el.musicToggleBtn) el.musicToggleBtn.addEventListener('click', ()=>{ void togglePlayback(); });
+    if (el.musicPrevBtn) el.musicPrevBtn.addEventListener('click', ()=>{ const i=state.tracks.findIndex((x)=>x.id===state.currentTrackId); if(i<0) return; applyTrack(state.tracks[(i-1+state.tracks.length)%state.tracks.length].id); });
+    if (el.musicNextBtn) el.musicNextBtn.addEventListener('click', ()=>{ const i=state.tracks.findIndex((x)=>x.id===state.currentTrackId); if(i<0) return; applyTrack(state.tracks[(i+1)%state.tracks.length].id); });
+    if (el.musicProgress) el.musicProgress.addEventListener('input', ()=>{ if (!audioPlayer.duration) return; audioPlayer.currentTime = (Number(el.musicProgress.value)/100)*audioPlayer.duration; processTimeline(); });
+    if (el.recordToggleBtn) el.recordToggleBtn.addEventListener('click', ()=>{ if (recorder) stopRecording(); else void startRecording(); });
+    if (el.searchInput) el.searchInput.addEventListener('input', renderSuggestions);
+    if (el.autoScrollEnabled) el.autoScrollEnabled.addEventListener('change', ()=>{ state.autoScroll = el.autoScrollEnabled.checked; });
+    if (el.pauseAtPosts) el.pauseAtPosts.addEventListener('change', ()=>{ state.pauseAtPosts = el.pauseAtPosts.checked; });
+    if (el.scrollSpeed) el.scrollSpeed.addEventListener('input', ()=>{ state.speedPxPerSecond = Number(el.scrollSpeed.value); });
   }
 
   function tick(now) {
-    if (page !== 'feed' || !state.autoScroll) {
-      state.lastTime = now;
-      requestAnimationFrame(tick);
-      return;
+    if (page === 'feed' && state.autoScroll) {
+      const delta = (now - state.lastTime) / 1000;
+      window.scrollBy(0, state.speedPxPerSecond * delta);
     }
-
-    maybeResetLoop();
-
-    if (state.isPaused) {
-      if (now >= state.pauseUntil) state.isPaused = false;
-      state.lastTime = now;
-      requestAnimationFrame(tick);
-      return;
-    }
-
-    const delta = (now - state.lastTime) / 1000;
-    window.scrollBy(0, state.speedPxPerSecond * delta);
-    maybePauseAtPost(now);
     state.lastTime = now;
     requestAnimationFrame(tick);
   }
 
-  function bindEvents() {
-    if (el.postType && el.parentPostSelect) {
-      el.postType.addEventListener('change', () => {
-        el.parentPostSelect.disabled = el.postType.value !== 'comment';
-      });
-      el.parentPostSelect.disabled = true;
-    }
-
-    if (el.form) el.form.addEventListener('submit', onPublish);
-
-    if (el.manageList) {
-      el.manageList.addEventListener('click', (event) => {
-        const btn = event.target.closest('[data-delete-post-id]');
-        if (!btn) return;
-        deletePostOrComment(btn.getAttribute('data-delete-post-id'));
-      });
-    }
-
-    if (el.suggestionForm) el.suggestionForm.addEventListener('submit', onAddSuggestion);
-
-    if (el.suggestionManageList) {
-      el.suggestionManageList.addEventListener('click', (event) => {
-        const btn = event.target.closest('[data-delete-suggestion-id]');
-        if (!btn) return;
-        deleteSuggestion(btn.getAttribute('data-delete-suggestion-id'));
-      });
-    }
-
-    if (el.musicForm) el.musicForm.addEventListener('submit', onAddTrack);
-
-    if (el.musicManageList) {
-      el.musicManageList.addEventListener('click', (event) => {
-        const btn = event.target.closest('[data-delete-track-id]');
-        if (!btn) return;
-        void deleteTrack(btn.getAttribute('data-delete-track-id'));
-      });
-    }
-
-    if (el.musicTrackSelect) {
-      el.musicTrackSelect.addEventListener('change', () => {
-        applySelectedTrack(el.musicTrackSelect.value);
-      });
-    }
-
-    if (el.musicToggleBtn) el.musicToggleBtn.addEventListener('click', togglePlayback);
-
-
-    if (el.musicPrevBtn) {
-      el.musicPrevBtn.addEventListener('click', () => {
-        if (!state.tracks.length) return;
-        const currentIndex = state.tracks.findIndex((x) => x.id === state.currentTrackId);
-        const nextIndex = currentIndex <= 0 ? state.tracks.length - 1 : currentIndex - 1;
-        applySelectedTrack(state.tracks[nextIndex].id);
-        if (!audioPlayer.paused) audioPlayer.play();
-      });
-    }
-
-    if (el.musicNextBtn) {
-      el.musicNextBtn.addEventListener('click', () => {
-        if (!state.tracks.length) return;
-        const currentIndex = state.tracks.findIndex((x) => x.id === state.currentTrackId);
-        const nextIndex = currentIndex >= state.tracks.length - 1 ? 0 : currentIndex + 1;
-        applySelectedTrack(state.tracks[nextIndex].id);
-        if (!audioPlayer.paused) audioPlayer.play();
-      });
-    }
-
-    if (el.musicProgress) {
-      el.musicProgress.addEventListener('input', () => {
-        if (!Number.isFinite(audioPlayer.duration) || !audioPlayer.duration) return;
-        audioPlayer.currentTime = (Number(el.musicProgress.value) / 100) * audioPlayer.duration;
-      });
-    }
-
-    if (el.searchInput) el.searchInput.addEventListener('input', renderSuggestions);
-    if (el.autoScrollEnabled) el.autoScrollEnabled.addEventListener('change', () => { state.autoScroll = el.autoScrollEnabled.checked; });
-    if (el.pauseAtPosts) el.pauseAtPosts.addEventListener('change', () => { state.pauseAtPosts = el.pauseAtPosts.checked; });
-    if (el.scrollSpeed) el.scrollSpeed.addEventListener('input', () => { state.speedPxPerSecond = Number(el.scrollSpeed.value); });
+  function initVisualizer() {
+    const c = el.musicVisualizer; if (!c) return;
+    const ctx = c.getContext('2d'); if (!ctx) return;
+    const draw = () => { const w = c.width = c.clientWidth; const h = c.height = c.clientHeight; ctx.fillStyle='#0a0e17'; ctx.fillRect(0,0,w,h); for(let i=0;i<24;i++){ const hh=(audioPlayer.paused?8:10+Math.random()*34); ctx.fillStyle='#6f8fff'; ctx.fillRect(12+i*8,h/2-hh/2,5,hh);} requestAnimationFrame(draw); };
+    draw();
   }
 
-  async function init() {
-    await loadData();
-    refresh();
-    bindEvents();
-
-    if (state.currentTrackId) applySelectedTrack(state.currentTrackId);
-
-    initVisualizer();
-
-    audioPlayer.addEventListener('loadedmetadata', () => {
-      if (el.musicDuration) el.musicDuration.textContent = formatAudioTime(audioPlayer.duration);
-    });
-
-    audioPlayer.addEventListener('timeupdate', () => {
-      if (el.musicCurrentTime) el.musicCurrentTime.textContent = formatAudioTime(audioPlayer.currentTime);
-      if (el.musicProgress && Number.isFinite(audioPlayer.duration) && audioPlayer.duration > 0) {
-        el.musicProgress.value = String((audioPlayer.currentTime / audioPlayer.duration) * 100);
-      }
-    });
-
-    audioPlayer.addEventListener('ended', () => {
-      if (!state.tracks.length) return;
-      const currentIndex = state.tracks.findIndex((x) => x.id === state.currentTrackId);
-      const nextIndex = currentIndex >= state.tracks.length - 1 ? 0 : currentIndex + 1;
-      applySelectedTrack(state.tracks[nextIndex].id);
-      audioPlayer.play();
-    });
-
-    requestAnimationFrame((start) => {
-      state.lastTime = start;
-      requestAnimationFrame(tick);
-    });
+  function initAudio() {
+    audioPlayer.addEventListener('timeupdate', () => { if (el.musicCurrentTime) el.musicCurrentTime.textContent = fmt(audioPlayer.currentTime); if (el.musicDuration) el.musicDuration.textContent = fmt(audioPlayer.duration); if (el.musicProgress && audioPlayer.duration) el.musicProgress.value = String((audioPlayer.currentTime / audioPlayer.duration) * 100); processTimeline(); });
+    audioPlayer.addEventListener('ended', () => { if (el.musicToggleBtn) el.musicToggleBtn.textContent = '▶'; autoRecordStop(); if (el.timelineOverlay) el.timelineOverlay.innerHTML = ''; });
+    audioPlayer.addEventListener('pause', autoRecordStop);
   }
 
-  void init();
+  function init() { load(); refresh(); bind(); initVisualizer(); initAudio(); if (state.currentTrackId) applyTrack(state.currentTrackId); requestAnimationFrame(tick); }
+  init();
 })();

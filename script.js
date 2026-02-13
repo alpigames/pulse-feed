@@ -157,7 +157,7 @@
         <p class="post-text ${isAdminPreview ? 'editable-text' : ''}" ${isAdminPreview ? `data-edit-text="${p.id}"` : ''}>${esc(p.text)}</p>
         <div ${isAdminPreview ? `data-edit-media="${p.id}" class="editable-media-wrap"` : ''}>${mediaNode({ src: p.media, mediaType: p.mediaType })}</div>
         <div class="post-actions"><span>❤ ${p.likes || 0}</span><span>↻ ${p.reposts || 0}</span></div>
-        ${isAdminPreview ? `<button class="publish-btn quick-comment-btn" type="button" data-quick-comment="${p.id}">+ Hızlı yorum</button>` : ''}
+        ${isAdminPreview ? `<div class="quick-comment-wrap" data-quick-wrap="${p.id}"><button class="publish-btn quick-comment-btn" type="button" data-quick-comment="${p.id}">+ Hızlı yorum</button><form class="quick-comment-form" data-quick-form="${p.id}"><textarea rows="2" placeholder="Yorum metni" data-quick-text="${p.id}"></textarea><input type="number" min="0" step="0.1" placeholder="Zaman damgası (sn)" data-quick-ts="${p.id}" /><div class="quick-comment-actions"><button class="publish-btn" type="submit">Ekle</button><button class="delete-btn" type="button" data-quick-cancel="${p.id}">Kapat</button></div></form></div>` : ''}
         <section class="comments">
           ${shownComments.map((c) => {
             const cAvatar = c.authorAvatar || avatarFor(c.author);
@@ -327,8 +327,11 @@
       try {
         await ensureVisualizerNodes();
         if (visualizer.ctx?.state === 'suspended') await visualizer.ctx.resume();
+        if (page === 'feed') {
+          const recordingReady = await startRecording(true);
+          if (!recordingReady) return;
+        }
         await audioPlayer.play();
-        autoRecordStart();
       } catch {
         alert('Tarayıcı oynatmayı engelledi.');
       }
@@ -477,8 +480,9 @@
   let recordStream = null;
   let recordedChunks = [];
 
-  async function startRecording() {
-    if (page !== 'feed' || recorder) return;
+  async function startRecording(silentFail = false) {
+    if (page !== 'feed') return false;
+    if (recorder) return true;
     try {
       recordStream = await navigator.mediaDevices.getDisplayMedia({
         video: {
@@ -487,7 +491,7 @@
           height: { ideal: 2160 },
           displaySurface: 'browser',
         },
-        audio: true,
+        audio: false,
         preferCurrentTab: true,
         selfBrowserSurface: 'include',
         surfaceSwitching: 'exclude',
@@ -509,8 +513,10 @@
       };
       recorder.start(250);
       if (el.recordToggleBtn) el.recordToggleBtn.textContent = '■ Stop';
+      return true;
     } catch {
-      alert('Kayıt başlatılamadı. Tarayıcı güvenlik nedeniyle seçim ister.');
+      if (!silentFail) alert('Kayıt başlatılamadı. Tarayıcı güvenlik nedeniyle seçim ister.');
+      return false;
     }
   }
 
@@ -518,7 +524,7 @@
     if (recorder && recorder.state !== 'inactive') recorder.stop();
   }
 
-  const autoRecordStart = () => { void startRecording(); };
+  const autoRecordStart = async () => { await startRecording(true); };
   const autoRecordStop = () => { stopRecording(); };
 
   function bind() {
@@ -605,33 +611,59 @@
 
         const quick = e.target.closest('[data-quick-comment]');
         if (quick) {
-          const parentId = quick.dataset.quickComment;
-          const text = window.prompt('Hızlı yorum metni:');
-          if (!text || !text.trim()) return;
-          const parent = state.posts.find((x) => x.id === parentId && x.type === 'post');
-          if (!parent) return;
-          state.posts.push({
-            id: uid(),
-            type: 'comment',
-            parentId,
-            author: pickRandomNick(),
-            authorAvatar: '',
-            text: text.trim(),
-            media: '',
-            mediaType: 'image',
-            carousel: [],
-            timestampSec: Number.isFinite(parent.timestampSec) ? parent.timestampSec + 0.6 + (commentsFor(parentId).length * 0.8) : null,
-            sponsored: false,
-            vip: false,
-            boosted: false,
-            likes: 0,
-            reposts: 0,
-            createdAt: Date.now(),
-          });
-          persistPostAndSuggestions();
-          buildTimeline();
-          refresh();
+          const wrap = el.adminFeed.querySelector(`[data-quick-wrap="${quick.dataset.quickComment}"]`);
+          if (!wrap) return;
+          wrap.classList.add('open');
+          const textInput = wrap.querySelector(`[data-quick-text="${quick.dataset.quickComment}"]`);
+          if (textInput) textInput.focus();
+          return;
         }
+
+        const cancel = e.target.closest('[data-quick-cancel]');
+        if (cancel) {
+          const wrap = el.adminFeed.querySelector(`[data-quick-wrap="${cancel.dataset.quickCancel}"]`);
+          if (wrap) wrap.classList.remove('open');
+        }
+      });
+
+      el.adminFeed.addEventListener('submit', (e) => {
+        const form = e.target.closest('[data-quick-form]');
+        if (!form) return;
+        e.preventDefault();
+        const parentId = form.dataset.quickForm;
+        const parent = state.posts.find((x) => x.id === parentId && x.type === 'post');
+        if (!parent) return;
+        const textInput = form.querySelector(`[data-quick-text="${parentId}"]`);
+        const tsInput = form.querySelector(`[data-quick-ts="${parentId}"]`);
+        const text = (textInput?.value || '').trim();
+        if (!text) return;
+        const timestampRaw = Number(tsInput?.value);
+        const fallbackTs = Number.isFinite(parent.timestampSec) ? parent.timestampSec + 0.6 + (commentsFor(parentId).length * 0.8) : null;
+        state.posts.push({
+          id: uid(),
+          type: 'comment',
+          parentId,
+          author: pickRandomNick(),
+          authorAvatar: '',
+          text,
+          media: '',
+          mediaType: 'image',
+          carousel: [],
+          timestampSec: Number.isFinite(timestampRaw) ? timestampRaw : fallbackTs,
+          sponsored: false,
+          vip: false,
+          boosted: false,
+          likes: 0,
+          reposts: 0,
+          createdAt: Date.now(),
+        });
+        if (textInput) textInput.value = '';
+        if (tsInput) tsInput.value = '';
+        const wrap = el.adminFeed.querySelector(`[data-quick-wrap="${parentId}"]`);
+        if (wrap) wrap.classList.remove('open');
+        persistPostAndSuggestions();
+        buildTimeline();
+        refresh();
       });
 
       if (el.editAvatarInput) {

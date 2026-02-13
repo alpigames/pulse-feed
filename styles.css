@@ -9,7 +9,7 @@ body{padding:12px}
 .left-brand-logo{width:50px;height:50px}
 .left-sidebar h2{margin:0;font-size:2.4rem}
 .menu{display:grid;gap:8px}
-.menu a{text-decoration:none;border-radius:10px;padding:10px 12px;font-size:1.35rem}
+.menu a{text-decoration:none;border-radius:10px;padding:10px 12px;font-size:1.35rem;display:flex;align-items:center;justify-content:flex-start;gap:8px}
 .menu-icon{display:inline-block;width:56px;font-size:2.4rem;line-height:1}
 .app-shell{width:100%}
 .panel{border-radius:14px;padding:12px;margin-bottom:10px}
@@ -20,7 +20,7 @@ textarea,select,input[type="text"],input[type="file"],input[type="number"]{borde
 textarea{min-height:110px;resize:vertical}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .checkbox-line{display:flex;gap:8px;align-items:center}
-.publish-btn,.delete-btn,.tab-btn{border:1px solid #fff;border-radius:999px;background:#000;color:#fff;padding:8px 14px;cursor:pointer;text-decoration:none;display:inline-block;font-size:1rem}
+.publish-btn,.delete-btn,.tab-btn{border:1px solid #fff;border-radius:999px;background:#000;color:#fff;padding:8px 14px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;font-size:1rem}
 .manage-list{display:grid;gap:8px;max-height:280px;overflow:auto}
 .manage-item{border-radius:10px;padding:8px;display:flex;justify-content:space-between;gap:10px;align-items:center}
 .feed{display:grid;gap:10px}
@@ -59,6 +59,9 @@ textarea{min-height:110px;resize:vertical}
 .expand-box{padding:10px;border:1px solid #33425d;border-radius:12px;background:#090c13}
 .comment-bubble{margin-top:8px;padding:10px;border-radius:12px;background:#1a2336;animation:bounce .35s ease both}
 .comment-bubble span{margin-right:6px}
+.typing-bubble{display:flex;align-items:center;gap:8px;margin-top:8px;padding:8px 10px;border-radius:12px;background:#1a2336;max-width:max-content}.typing-bubble span{font-size:.9rem}.typing-bubble i{width:6px;height:6px;border-radius:50%;background:#aac0ff;display:inline-block;animation:typing 1s infinite ease-in-out}.typing-bubble i:nth-of-type(2){animation-delay:.15s}.typing-bubble i:nth-of-type(3){animation-delay:.3s}
+@keyframes typing{0%,80%,100%{transform:translateY(0);opacity:.4}40%{transform:translateY(-4px);opacity:1}}
+
 @keyframes bounce{0%{transform:translateY(10px);opacity:0}100%{transform:translateY(0);opacity:1}}
 .record-btn{border-color:#ff6b6b;color:#ffb4b4}
 @media (max-width:1200px){.layout{grid-template-columns:1fr}.sidebar{position:static}.form-row{grid-template-columns:1fr}}

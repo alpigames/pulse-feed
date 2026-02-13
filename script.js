@@ -1,5 +1,5 @@
 (() => {
-  const POSTS_KEY = 'pulseFeedPosts.v7';
+  const POSTS_KEY = 'pulseFeedPosts.v8';
   const SUGGESTIONS_KEY = 'pulseSuggestions.v2';
   const MUSIC_DB_NAME = 'pulseFeedDb';
   const MUSIC_DB_VERSION = 1;
@@ -8,32 +8,43 @@
   const LEGACY_MUSIC_KEY = 'pulseMusicTracks.v1';
   const page = document.body.dataset.page || 'admin';
 
-  const NICKNAMES = [
-    'DerinAkis','BetonZihin','MaskesizGercek','GriDuvar','AltKatSakin','SogukGercek','DipDalga','KaranlikYorum','Gozlemci34','NabizTutan','IsimsizKayit','SistemArizasi','ArkaSokakVeri','KuleAltindan','YedinciKat','UyariSeviyesi','BuzGibiHakikat','SesKaydi01','CatiKatisi','DuvarArasi','user384920','yorumcu_xx','gercekler123','vatandas_01','milliSes78','haberTakipcisi','objektif_bakis','dogruYorumcu','netKonusan','turkEvladidir','sistemSavunucusu','rastgele_987','anon_kayit','yorumMakinesi','feedKontrol','veri_akisi','trendAvcisi','feedTetik','BodrumdanSes','TesisatciDegil','CatiUstunde','DelikIcinden','BetonAltindan','KilerSakin','DuvarKemirgen','SogukZemin','KatMaliki','KiraciDegil','TapuBizde','IslakDuvar','RutubetliGercek','SarsintiOncesi','ArizaKaydi','EnkazAltindan','PasaSakini','YonetimKatinda','MarkaOrtak','GuvenliYarin','BuyumeUzmani','EkonomiTakip','ResmiAciklama','PRMasasi','KrizYonetimi','KamuBilgi','IletisimOfisi','GuvenilirKaynak','KurumsalSes','DestekHatti','StratejiMasasi','DegerYaratir','IleriVizyon','YerAltiKaydi','SertAkis','DissArsivi','MaskeyiDusur','CizgiDisi','SakinOlmam','HukumGeldi','DefterAcik','KayitDisi','GozDiken','NabizYuksek','TansiyonArtis','DuzenCoktu','SinyalYok','VeriPatladi',
-  ];
+  const NICKNAMES = ['DerinAkis','BetonZihin','MaskesizGercek','GriDuvar','AltKatSakin','SogukGercek','DipDalga','KaranlikYorum','Gozlemci34','NabizTutan','IsimsizKayit','SistemArizasi','ArkaSokakVeri','KuleAltindan','YedinciKat','UyariSeviyesi','BuzGibiHakikat','SesKaydi01','CatiKatisi','DuvarArasi','user384920','yorumcu_xx','gercekler123','vatandas_01','milliSes78','haberTakipcisi','objektif_bakis','dogruYorumcu','netKonusan','turkEvladidir','sistemSavunucusu','rastgele_987','anon_kayit','yorumMakinesi','feedKontrol','veri_akisi','trendAvcisi','feedTetik','BodrumdanSes','TesisatciDegil','CatiUstunde','DelikIcinden','BetonAltindan','KilerSakin','DuvarKemirgen','SogukZemin','KatMaliki','KiraciDegil','TapuBizde','IslakDuvar','RutubetliGercek','SarsintiOncesi','ArizaKaydi','EnkazAltindan','PasaSakini','YonetimKatinda','MarkaOrtak','GuvenliYarin','BuyumeUzmani','EkonomiTakip','ResmiAciklama','PRMasasi','KrizYonetimi','KamuBilgi','IletisimOfisi','GuvenilirKaynak','KurumsalSes','DestekHatti','StratejiMasasi','DegerYaratir','IleriVizyon','YerAltiKaydi','SertAkis','DissArsivi','MaskeyiDusur','CizgiDisi','SakinOlmam','HukumGeldi','DefterAcik','KayitDisi','GozDiken','NabizYuksek','TansiyonArtis','DuzenCoktu','SinyalYok','VeriPatladi'];
 
   const state = {
     posts: [], suggestions: [], tracks: [], currentTrackId: '',
-    autoScroll: false, pauseAtPosts: true, speedPxPerSecond: 34, lastTime: performance.now(),
-    timelineIndex: 0, timelineEvents: [], lastTrackTime: 0, nickPool: [],
+    autoScroll: false, speedPxPerSecond: 34, lastTime: performance.now(),
+    timelineEvents: [], timelineIndex: 0, lastTrackTime: 0,
+    visiblePostIds: [], visibleComments: {}, typingComments: {},
+    nickPool: [],
   };
-
-  const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  const audioPlayer = new Audio();
-  audioPlayer.loop = false;
-  let musicDbPromise = null;
 
   const ids = ['composerForm','postText','postType','parentPostSelect','mediaFile','carouselFiles','carouselTimestamps','postTimestamp','authorAvatarFile','authorHandle','authorRandom','isSponsored','isVip','isBoosted','feed','adminFeed','manageList','suggestionForm','suggestionHandle','suggestionBio','suggestionAvatarFile','suggestionManageList','suggestionsList','searchInput','autoScrollEnabled','scrollSpeed','pauseAtPosts','musicForm','musicTitle','musicArtist','musicFile','musicManageList','musicTrackSelect','musicToggleBtn','musicPrevBtn','musicNextBtn','musicTrackTitle','musicTrackSinger','musicProgress','musicCurrentTime','musicDuration','musicVisualizer','timelineOverlay','recordToggleBtn'];
   const el = Object.fromEntries(ids.map((id) => [id, document.getElementById(id)]));
 
+  const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const esc = (s) => String(s).replace(/[&<>"']/g, (m) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
   const timeAgo = (ts) => `${Math.max(1, Math.floor((Date.now() - ts) / 60000))}m`;
   const fmt = (v) => { const t = Math.floor(v || 0); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`; };
   const avatarFor = (h) => `https://api.dicebear.com/9.x/thumbs/svg?seed=${encodeURIComponent(String(h || 'user').replace('@', ''))}`;
 
+  const audioPlayer = new Audio();
+  audioPlayer.loop = false;
+  let musicDbPromise = null;
+
+  const visualizer = {
+    ctx: null,
+    analyser: null,
+    source: null,
+    data: null,
+    raf: 0,
+  };
+
   function seedSuggestions() {
     return [{ id: uid(), handle: '@blue.artist', bio: 'visual performer', avatar: '' }];
   }
+
+  function allPosts() { return state.posts.filter((x) => x.type === 'post').sort((a, b) => a.createdAt - b.createdAt); }
+  function commentsFor(postId) { return state.posts.filter((x) => x.type === 'comment' && x.parentId === postId).sort((a, b) => a.createdAt - b.createdAt); }
 
   function persistPostAndSuggestions() {
     localStorage.setItem(POSTS_KEY, JSON.stringify(state.posts));
@@ -59,13 +70,12 @@
     try {
       const db = await openMusicDb();
       if (!db) throw new Error('no db');
-      const tracks = await new Promise((resolve, reject) => {
+      return await new Promise((resolve, reject) => {
         const tx = db.transaction(MUSIC_STORE, 'readonly');
         const req = tx.objectStore(MUSIC_STORE).get(MUSIC_KEY);
         req.onsuccess = () => resolve(Array.isArray(req.result) ? req.result : []);
         req.onerror = () => reject(req.error);
       });
-      return tracks;
     } catch {
       return JSON.parse(localStorage.getItem(LEGACY_MUSIC_KEY) || '[]') || [];
     }
@@ -88,7 +98,7 @@
         localStorage.setItem(LEGACY_MUSIC_KEY, JSON.stringify(state.tracks));
         return true;
       } catch {
-        alert('Şarkı kaydı başarısız: depolama dolu olabilir.');
+        alert('Şarkı kaydedilemedi.');
         return false;
       }
     }
@@ -102,12 +112,9 @@
     state.nickPool = [...NICKNAMES];
   }
 
-  const posts = () => state.posts.filter((x) => x.type === 'post').sort((a, b) => a.createdAt - b.createdAt);
-  const comments = (id) => state.posts.filter((x) => x.type === 'comment' && x.parentId === id).sort((a, b) => a.createdAt - b.createdAt);
-
   function renderParentOptions() {
     if (!el.parentPostSelect) return;
-    el.parentPostSelect.innerHTML = '<option value="">None</option>' + posts().map((p) => `<option value="${p.id}">${esc(p.author)} · ${esc(p.text.slice(0, 20))}</option>`).join('');
+    el.parentPostSelect.innerHTML = '<option value="">None</option>' + allPosts().map((p) => `<option value="${p.id}">${esc(p.author)} · ${esc(p.text.slice(0, 20))}</option>`).join('');
   }
 
   function mediaNode(item, cls = 'media') {
@@ -116,26 +123,45 @@
     return `<img class="${cls}" src="${item.src}" alt="media" />`;
   }
 
+  function getFeedPosts() {
+    if (page !== 'feed') return allPosts();
+    return state.visiblePostIds
+      .map((id) => state.posts.find((x) => x.id === id && x.type === 'post'))
+      .filter(Boolean);
+  }
+
   function renderFeed(target) {
     if (!target) return;
-    const list = posts();
-    if (!list.length) {
-      target.innerHTML = '<div class="empty-feed">No posts yet.</div>';
+    const postList = getFeedPosts();
+    if (!postList.length) {
+      target.innerHTML = page === 'feed'
+        ? '<div class="empty-feed">Akış müzik zaman damgalarını bekliyor...</div>'
+        : '<div class="empty-feed">No posts yet.</div>';
       return;
     }
-    target.innerHTML = list.map((p) => {
-      const c = comments(p.id);
+
+    target.innerHTML = postList.map((p) => {
       const avatar = p.authorAvatar || avatarFor(p.author);
-      return `<article class="post-card">
+      const allComments = commentsFor(p.id);
+      const revealedIds = state.visibleComments[p.id] || [];
+      const shownComments = page === 'feed' ? allComments.filter((c) => revealedIds.includes(c.id)) : allComments;
+      const typing = page === 'feed' ? state.typingComments[p.id] : null;
+
+      return `<article class="post-card" data-post-id="${p.id}">
         <header class="post-head">
           <img class="avatar" src="${avatar}" alt="${esc(p.author)} avatar" />
           <p class="meta-row"><strong>${esc(p.author)}</strong> <span class="timestamp">· ${timeAgo(p.createdAt)}</span></p>
         </header>
         <p class="post-text">${esc(p.text)}</p>
         ${mediaNode({ src: p.media, mediaType: p.mediaType })}
-        ${p.carousel?.length ? `<div class="carousel-preview">${p.carousel.map((it) => `<span>${it.mediaType === 'video' ? '🎬' : '🖼'} ${Number(it.timestampSec || 0)}s</span>`).join('')}</div>` : ''}
         <div class="post-actions"><span>❤ ${p.likes || 0}</span><span>↻ ${p.reposts || 0}</span></div>
-        ${c.length ? `<section class="comments">${c.map((x) => `<p class="comment"><strong>${esc(x.author)}</strong>: ${esc(x.text)}</p>`).join('')}</section>` : ''}
+        <section class="comments">
+          ${shownComments.map((c) => {
+            const cAvatar = c.authorAvatar || avatarFor(c.author);
+            return `<p class="comment"><img class="avatar mini" src="${cAvatar}" alt="${esc(c.author)} avatar" /><span><strong>${esc(c.author)}</strong>: ${esc(c.text)}</span></p>`;
+          }).join('')}
+          ${typing ? `<div class="typing-bubble"><img class="avatar mini" src="${typing.avatar}" alt="typing avatar" /><span><strong>${esc(typing.author)}</strong> yazıyor</span><i></i><i></i><i></i></div>` : ''}
+        </section>
       </article>`;
     }).join('');
   }
@@ -221,13 +247,22 @@
     }
 
     state.posts.push({
-      id: uid(), type, parentId,
+      id: uid(),
+      type,
+      parentId,
       author: el.authorRandom?.checked ? pickRandomNick() : (el.authorHandle.value.trim() || '@studio.pulse'),
       authorAvatar: avatar,
-      text, media, mediaType, carousel,
+      text,
+      media,
+      mediaType,
+      carousel,
       timestampSec: Number.isFinite(Number(el.postTimestamp?.value)) ? Number(el.postTimestamp.value) : null,
-      sponsored: Boolean(el.isSponsored.checked), vip: Boolean(el.isVip.checked), boosted: Boolean(el.isBoosted.checked),
-      likes: 12, reposts: 3, createdAt: Date.now(),
+      sponsored: Boolean(el.isSponsored.checked),
+      vip: Boolean(el.isVip.checked),
+      boosted: Boolean(el.isBoosted.checked),
+      likes: 12,
+      reposts: 3,
+      createdAt: Date.now(),
     });
 
     persistPostAndSuggestions();
@@ -268,11 +303,28 @@
     if (el.musicTrackSinger) el.musicTrackSinger.textContent = t.artist;
   }
 
+  async function ensureVisualizerNodes() {
+    if (visualizer.analyser) return;
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    if (!visualizer.ctx) visualizer.ctx = new AudioCtx();
+    if (visualizer.ctx.state === 'suspended') await visualizer.ctx.resume();
+    visualizer.source = visualizer.ctx.createMediaElementSource(audioPlayer);
+    visualizer.analyser = visualizer.ctx.createAnalyser();
+    visualizer.analyser.fftSize = 256;
+    visualizer.source.connect(visualizer.analyser);
+    visualizer.analyser.connect(visualizer.ctx.destination);
+    visualizer.data = new Uint8Array(visualizer.analyser.frequencyBinCount);
+  }
+
   async function togglePlayback() {
     if (!audioPlayer.src) applyTrack(el.musicTrackSelect?.value || state.currentTrackId);
     if (!audioPlayer.src) return;
+
     if (audioPlayer.paused) {
       try {
+        await ensureVisualizerNodes();
+        if (visualizer.ctx?.state === 'suspended') await visualizer.ctx.resume();
         await audioPlayer.play();
         autoRecordStart();
       } catch {
@@ -282,24 +334,56 @@
       audioPlayer.pause();
       autoRecordStop();
     }
+
     if (el.musicToggleBtn) el.musicToggleBtn.textContent = audioPlayer.paused ? '▶' : '❚❚';
+  }
+
+  function rebuildFeedFromTimelineTime(t) {
+    state.visiblePostIds = [];
+    state.visibleComments = {};
+    state.typingComments = {};
+
+    for (const ev of state.timelineEvents) {
+      if (ev.ts > t) break;
+      if (ev.kind === 'post') {
+        if (!state.visiblePostIds.includes(ev.post.id)) state.visiblePostIds.push(ev.post.id);
+      }
+      if (ev.kind === 'comment') {
+        if (!state.visiblePostIds.includes(ev.post.id)) state.visiblePostIds.push(ev.post.id);
+        if (!state.visibleComments[ev.post.id]) state.visibleComments[ev.post.id] = [];
+        if (!state.visibleComments[ev.post.id].includes(ev.comment.id)) state.visibleComments[ev.post.id].push(ev.comment.id);
+      }
+    }
+
+    refresh();
   }
 
   function buildTimeline() {
     const events = [];
-    for (const p of posts()) {
+    for (const p of allPosts()) {
       if (Number.isFinite(p.timestampSec)) events.push({ ts: p.timestampSec, kind: 'post', post: p });
-      for (const c of comments(p.id)) if (Number.isFinite(c.timestampSec)) events.push({ ts: c.timestampSec, kind: 'comment', post: p, comment: c });
-      (p.carousel || []).forEach((it) => { if (Number.isFinite(it.timestampSec)) events.push({ ts: it.timestampSec, kind: 'carousel', post: p, item: it }); });
+      for (const c of commentsFor(p.id)) {
+        if (Number.isFinite(c.timestampSec)) events.push({ ts: c.timestampSec, kind: 'comment', post: p, comment: c });
+      }
+      for (const item of (p.carousel || [])) {
+        if (Number.isFinite(item.timestampSec)) events.push({ ts: item.timestampSec, kind: 'carousel', post: p, item });
+      }
     }
     state.timelineEvents = events.sort((a, b) => a.ts - b.ts);
     state.timelineIndex = 0;
   }
 
+  function centerPost(postId) {
+    if (page !== 'feed' || !el.feed) return;
+    const node = el.feed.querySelector(`[data-post-id="${postId}"]`);
+    if (!node) return;
+    node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
   let overlayTimer = 0;
   let boostTimer = 0;
   function showOverlay(html, duration = 1300) {
-    if (!el.timelineOverlay || page !== 'feed') return;
+    if (page !== 'feed' || !el.timelineOverlay) return;
     clearTimeout(overlayTimer);
     clearInterval(boostTimer);
     el.timelineOverlay.innerHTML = `<div class="timeline-modal">${html}</div>`;
@@ -308,58 +392,91 @@
     }, duration);
   }
 
+  function nextTimedComment(post, currentTs) {
+    return commentsFor(post.id)
+      .filter((c) => Number.isFinite(c.timestampSec) && c.timestampSec > currentTs)
+      .sort((a, b) => a.timestampSec - b.timestampSec)[0] || null;
+  }
+
   function triggerEvent(ev, nextTs) {
-    const dur = Math.max(400, ((nextTs ?? (ev.ts + 2)) - ev.ts) * 1000 - 80);
-    if (ev.kind === 'carousel') {
-      showOverlay(`<div class="timeline-head">Kaydırmalı post</div>${mediaNode(ev.item, 'timeline-media')}<p>${esc(ev.post.text)}</p>`, dur);
+    const dur = Math.max(500, ((nextTs ?? (ev.ts + 2)) - ev.ts) * 1000 - 80);
+
+    if (ev.kind === 'post') {
+      if (!state.visiblePostIds.includes(ev.post.id)) state.visiblePostIds.push(ev.post.id);
+      refresh();
+      centerPost(ev.post.id);
+
+      const hasTimedComments = commentsFor(ev.post.id).some((c) => Number.isFinite(c.timestampSec));
+      if (ev.post.boosted) {
+        showOverlay(`<h2>${esc(ev.post.text)}</h2><p id="boostCounts">❤ ${ev.post.likes} · ↻ ${ev.post.reposts}</p>`, dur);
+        let likes = ev.post.likes;
+        let reposts = ev.post.reposts;
+        boostTimer = window.setInterval(() => {
+          likes += Math.floor(Math.random() * 22) + 8;
+          reposts += Math.floor(Math.random() * 11) + 4;
+          const node = document.getElementById('boostCounts');
+          if (node) node.textContent = `❤ ${likes} · ↻ ${reposts}`;
+        }, 90);
+      } else if (hasTimedComments || ev.post.mediaType === 'video') {
+        const media = ev.post.mediaType === 'video'
+          ? `<video class="timeline-media" src="${ev.post.media}" autoplay muted playsinline controls></video>`
+          : mediaNode({ src: ev.post.media, mediaType: ev.post.mediaType }, 'timeline-media');
+        showOverlay(`<h3>${esc(ev.post.author)}</h3><p>${esc(ev.post.text)}</p>${media}`, dur);
+      }
       return;
     }
+
     if (ev.kind === 'comment') {
-      showOverlay(`<div class="timeline-head">Yorum akışı</div><div class="expand-box"><p>${esc(ev.post.text)}</p><div class="comment-bubble"><span>💬</span> <strong>${esc(ev.comment.author)}</strong><p>${esc(ev.comment.text)}</p></div></div>`, dur);
+      if (!state.visiblePostIds.includes(ev.post.id)) state.visiblePostIds.push(ev.post.id);
+      if (!state.visibleComments[ev.post.id]) state.visibleComments[ev.post.id] = [];
+      if (!state.visibleComments[ev.post.id].includes(ev.comment.id)) state.visibleComments[ev.post.id].push(ev.comment.id);
+
+      const nextComment = nextTimedComment(ev.post, ev.ts);
+      if (nextComment) {
+        state.typingComments[ev.post.id] = {
+          author: nextComment.author,
+          avatar: nextComment.authorAvatar || avatarFor(nextComment.author),
+        };
+      } else {
+        delete state.typingComments[ev.post.id];
+      }
+
+      refresh();
+      centerPost(ev.post.id);
       return;
     }
 
-    const p = ev.post;
-    if (p.boosted) {
-      showOverlay(`<div class="timeline-head">Trend Patlaması</div><h2>${esc(p.text)}</h2><p id="boostCounts">❤ ${p.likes} · ↻ ${p.reposts}</p>`, dur);
-      let l = p.likes;
-      let r = p.reposts;
-      boostTimer = window.setInterval(() => {
-        l += Math.floor(Math.random() * 22) + 8;
-        r += Math.floor(Math.random() * 11) + 4;
-        const node = document.getElementById('boostCounts');
-        if (node) node.textContent = `❤ ${l} · ↻ ${r}`;
-      }, 90);
-      return;
+    if (ev.kind === 'carousel') {
+      showOverlay(`${mediaNode(ev.item, 'timeline-media')}<p>${esc(ev.post.text)}</p>`, dur);
     }
-
-    const media = p.mediaType === 'video'
-      ? `<video class="timeline-media" src="${p.media}" autoplay muted playsinline controls></video>`
-      : mediaNode({ src: p.media, mediaType: p.mediaType }, 'timeline-media');
-    showOverlay(`<div class="timeline-head">Zaman damgalı post</div><h3>${esc(p.author)}</h3><p>${esc(p.text)}</p>${media}`, dur);
   }
 
   function processTimeline() {
     if (page !== 'feed' || audioPlayer.paused) return;
     const t = audioPlayer.currentTime;
+
     if (t + 0.3 < state.lastTrackTime) {
+      rebuildFeedFromTimelineTime(t);
       state.timelineIndex = state.timelineEvents.findIndex((x) => x.ts > t - 0.01);
       if (state.timelineIndex < 0) state.timelineIndex = state.timelineEvents.length;
     }
+
     while (state.timelineIndex < state.timelineEvents.length && state.timelineEvents[state.timelineIndex].ts <= t + 0.05) {
       const ev = state.timelineEvents[state.timelineIndex];
-      triggerEvent(ev, state.timelineEvents[state.timelineIndex + 1]?.ts);
+      const nextTs = state.timelineEvents[state.timelineIndex + 1]?.ts;
+      triggerEvent(ev, nextTs);
       state.timelineIndex += 1;
     }
+
     state.lastTrackTime = t;
   }
 
   let recorder = null;
-  let recordedChunks = [];
   let recordStream = null;
+  let recordedChunks = [];
 
   async function startRecording() {
-    if (recorder || page !== 'feed') return;
+    if (page !== 'feed' || recorder) return;
     try {
       recordStream = await navigator.mediaDevices.getDisplayMedia({
         video: {
@@ -384,14 +501,14 @@
         a.download = `pulse-feed-${Date.now()}.webm`;
         a.click();
         recordStream?.getTracks().forEach((tr) => tr.stop());
-        recorder = null;
         recordStream = null;
+        recorder = null;
         if (el.recordToggleBtn) el.recordToggleBtn.textContent = '● Record';
       };
       recorder.start(250);
       if (el.recordToggleBtn) el.recordToggleBtn.textContent = '■ Stop';
     } catch {
-      alert('Kayıt başlatılamadı. Tarayıcı izinlerini kontrol edin.');
+      alert('Kayıt başlatılamadı. Tarayıcı güvenlik nedeniyle seçim ister.');
     }
   }
 
@@ -407,9 +524,12 @@
       el.postType.addEventListener('change', () => { el.parentPostSelect.disabled = el.postType.value !== 'comment'; });
       el.parentPostSelect.disabled = true;
     }
+
     if (el.authorRandom) {
       el.authorHandle.disabled = el.authorRandom.checked;
-      el.authorRandom.addEventListener('change', () => { el.authorHandle.disabled = el.authorRandom.checked; });
+      el.authorRandom.addEventListener('change', () => {
+        el.authorHandle.disabled = el.authorRandom.checked;
+      });
     }
 
     if (el.composerForm) el.composerForm.addEventListener('submit', onPublish);
@@ -428,12 +548,12 @@
     if (el.suggestionForm) {
       el.suggestionForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const handleInput = el.suggestionHandle.value.trim();
+        const handle = el.suggestionHandle.value.trim();
         const bio = el.suggestionBio.value.trim();
-        if (!handleInput || !bio) return;
+        if (!handle || !bio) return;
         state.suggestions.unshift({
           id: uid(),
-          handle: handleInput.startsWith('@') ? handleInput : `@${handleInput}`,
+          handle: handle.startsWith('@') ? handle : `@${handle}`,
           bio,
           avatar: await toDataUrl(el.suggestionAvatarFile.files?.[0] || null),
         });
@@ -476,26 +596,39 @@
 
     if (el.musicTrackSelect) el.musicTrackSelect.addEventListener('change', () => applyTrack(el.musicTrackSelect.value));
     if (el.musicToggleBtn) el.musicToggleBtn.addEventListener('click', () => { void togglePlayback(); });
-    if (el.musicPrevBtn) el.musicPrevBtn.addEventListener('click', () => {
-      if (!state.tracks.length) return;
-      const i = state.tracks.findIndex((x) => x.id === state.currentTrackId);
-      applyTrack(state.tracks[(i - 1 + state.tracks.length) % state.tracks.length].id);
-    });
-    if (el.musicNextBtn) el.musicNextBtn.addEventListener('click', () => {
-      if (!state.tracks.length) return;
-      const i = state.tracks.findIndex((x) => x.id === state.currentTrackId);
-      applyTrack(state.tracks[(i + 1) % state.tracks.length].id);
-    });
-    if (el.musicProgress) el.musicProgress.addEventListener('input', () => {
-      if (!audioPlayer.duration) return;
-      audioPlayer.currentTime = (Number(el.musicProgress.value) / 100) * audioPlayer.duration;
-      processTimeline();
-    });
 
-    if (el.recordToggleBtn) el.recordToggleBtn.addEventListener('click', () => { if (recorder) stopRecording(); else void startRecording(); });
+    if (el.musicPrevBtn) {
+      el.musicPrevBtn.addEventListener('click', () => {
+        if (!state.tracks.length) return;
+        const i = state.tracks.findIndex((x) => x.id === state.currentTrackId);
+        applyTrack(state.tracks[(i - 1 + state.tracks.length) % state.tracks.length].id);
+      });
+    }
+
+    if (el.musicNextBtn) {
+      el.musicNextBtn.addEventListener('click', () => {
+        if (!state.tracks.length) return;
+        const i = state.tracks.findIndex((x) => x.id === state.currentTrackId);
+        applyTrack(state.tracks[(i + 1) % state.tracks.length].id);
+      });
+    }
+
+    if (el.musicProgress) {
+      el.musicProgress.addEventListener('input', () => {
+        if (!audioPlayer.duration) return;
+        audioPlayer.currentTime = (Number(el.musicProgress.value) / 100) * audioPlayer.duration;
+        processTimeline();
+      });
+    }
+
+    if (el.recordToggleBtn) {
+      el.recordToggleBtn.addEventListener('click', () => {
+        if (recorder) stopRecording(); else void startRecording();
+      });
+    }
+
     if (el.searchInput) el.searchInput.addEventListener('input', renderSuggestions);
     if (el.autoScrollEnabled) el.autoScrollEnabled.addEventListener('change', () => { state.autoScroll = el.autoScrollEnabled.checked; });
-    if (el.pauseAtPosts) el.pauseAtPosts.addEventListener('change', () => { state.pauseAtPosts = el.pauseAtPosts.checked; });
     if (el.scrollSpeed) el.scrollSpeed.addEventListener('input', () => { state.speedPxPerSecond = Number(el.scrollSpeed.value); });
   }
 
@@ -513,18 +646,43 @@
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+
     const draw = () => {
-      const w = canvas.width = canvas.clientWidth;
-      const h = canvas.height = canvas.clientHeight;
+      const w = canvas.width = Math.max(1, canvas.clientWidth);
+      const h = canvas.height = Math.max(1, canvas.clientHeight);
       ctx.fillStyle = '#0a0e17';
       ctx.fillRect(0, 0, w, h);
-      for (let i = 0; i < 24; i += 1) {
-        const hh = audioPlayer.paused ? 10 : 14 + (Math.random() * 44);
-        ctx.fillStyle = '#6f8fff';
-        ctx.fillRect(12 + (i * 8), (h / 2) - (hh / 2), 5, hh);
+
+      const bars = 24;
+      const gap = 4;
+      const barW = Math.max(3, Math.floor((w - ((bars - 1) * gap)) / bars));
+      const startX = (w - ((bars * barW) + ((bars - 1) * gap))) / 2;
+      const center = (bars - 1) / 2;
+
+      if (visualizer.analyser && visualizer.data) {
+        visualizer.analyser.getByteFrequencyData(visualizer.data);
       }
-      requestAnimationFrame(draw);
+
+      for (let i = 0; i < bars; i += 1) {
+        const dist = Math.abs(i - center) / center;
+        const centerBoost = 1 - (dist ** 1.4);
+        const dataIndex = Math.floor((i / bars) * (visualizer.data?.length || 1));
+        const rhythm = visualizer.data ? (visualizer.data[dataIndex] / 255) : 0;
+        const base = audioPlayer.paused ? 0.06 : 0.12;
+        const level = Math.max(base, (rhythm * 0.9) + (centerBoost * 0.35));
+        const hh = Math.max(6, level * h * (0.15 + (centerBoost * 0.5)));
+        const x = startX + (i * (barW + gap));
+        const y = (h / 2) - (hh / 2);
+        const grad = ctx.createLinearGradient(0, y, 0, y + hh);
+        grad.addColorStop(0, '#9cb6ff');
+        grad.addColorStop(1, '#41527e');
+        ctx.fillStyle = grad;
+        ctx.fillRect(x, y, barW, hh);
+      }
+
+      visualizer.raf = requestAnimationFrame(draw);
     };
+
     draw();
   }
 
@@ -543,6 +701,7 @@
       autoRecordStop();
       if (el.timelineOverlay) el.timelineOverlay.innerHTML = '';
     });
+
     audioPlayer.addEventListener('pause', autoRecordStop);
   }
 

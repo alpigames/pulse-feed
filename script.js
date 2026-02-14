@@ -14,7 +14,7 @@
     posts: [], suggestions: [], tracks: [], currentTrackId: '',
     autoScroll: false, speedPxPerSecond: 34, lastTime: performance.now(),
     timelineEvents: [], timelineIndex: 0, lastTrackTime: 0,
-    visiblePostIds: [], visibleComments: {}, typingComments: {},
+    visiblePostIds: [], visibleComments: {}, typingComments: {}, activeCommentFlows: {},
     nickPool: [],
   };
 
@@ -440,11 +440,16 @@
     const dur = Math.max(500, ((nextTs ?? (ev.ts + 2)) - ev.ts) * 1000 - 80);
 
     if (ev.kind === 'post') {
-      if (!state.visiblePostIds.includes(ev.post.id)) state.visiblePostIds.push(ev.post.id);
-      refresh();
-      centerPost(ev.post.id);
-
       const hasTimedComments = commentsFor(ev.post.id).some((c) => Number.isFinite(c.timestampSec));
+      if (hasTimedComments) {
+        state.activeCommentFlows[ev.post.id] = true;
+      } else if (!state.visiblePostIds.includes(ev.post.id)) {
+        state.visiblePostIds.push(ev.post.id);
+      }
+
+      refresh();
+      if (!hasTimedComments) centerPost(ev.post.id);
+
       if (ev.post.boosted) {
         if (!state.activeBoostIds) state.activeBoostIds = [];
         if (!state.activeBoostCfg) state.activeBoostCfg = {};
@@ -472,6 +477,10 @@
         };
       } else {
         delete state.typingComments[ev.post.id];
+        if (state.activeCommentFlows[ev.post.id]) {
+          delete state.activeCommentFlows[ev.post.id];
+          if (!state.visiblePostIds.includes(ev.post.id)) state.visiblePostIds.push(ev.post.id);
+        }
       }
 
       refresh();

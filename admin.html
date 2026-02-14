@@ -15,28 +15,18 @@
       </div>
 
       <nav class="menu" aria-label="Main menu">
-        <a href="feed.html"><span class="menu-icon">⌂</span>Anasayfa</a>
-        <a href="feed.html"><span class="menu-icon">#</span>Keşfet</a>
-        <a href="feed.html"><span class="menu-icon">◉</span>Bildirimler</a>
-        <a href="feed.html"><span class="menu-icon">✉</span>Mesajlar</a>
-        <a href="feed.html" class="premium-link"><span class="menu-icon">$</span>Premium</a>
+        <a href="feed.html"><span class="menu-icon home-icon">⌂</span>Anasayfa</a>
+        <a href="feed.html"><span class="menu-icon explore-icon">#</span>Keşfet</a>
+        <a href="feed.html"><span class="menu-icon small-icon">✉</span>Mesajlar</a>
+        <a href="feed.html" class="premium-link"><span class="menu-icon premium-icon"><span class="vip-pill">VIP</span></span>Premium</a>
       </nav>
 
       <section class="music-upload manager" aria-label="Müzik yönetimi">
         <h3>Music Player</h3>
         <form id="musicForm" class="composer-form compact">
-          <label>
-            Şarkı adı
-            <input id="musicTitle" type="text" placeholder="Parça adı" required />
-          </label>
-          <label>
-            Sanatçı
-            <input id="musicArtist" type="text" placeholder="Sanatçı adı" required />
-          </label>
-          <label>
-            Audio dosyası
-            <input id="musicFile" type="file" accept=".mp3,.wav,.m4a,.ogg,.aac" required />
-          </label>
+          <label>Şarkı adı<input id="musicTitle" type="text" required /></label>
+          <label>Sanatçı<input id="musicArtist" type="text" required /></label>
+          <label>Audio dosyası<input id="musicFile" type="file" accept=".mp3,.wav,.m4a,.ogg,.aac" required /></label>
           <button class="publish-btn" type="submit">Şarkı ekle</button>
           <p id="musicFormNotice" class="form-notice" role="status" aria-live="polite"></p>
         </form>
@@ -45,71 +35,40 @@
     </aside>
 
     <main class="app-shell">
-      <header class="top-bar">
-        <div class="brand">
-          <img src="PulseWhite.svg" alt="Pulse logo" class="brand-logo" />
-          <h1>Pulse</h1>
-        </div>
-        <div class="mode-switch" role="tablist" aria-label="Mode switch">
-          <a href="admin.html" class="tab-btn active">Composer / Admin</a>
-          <a href="feed.html" class="tab-btn">Feed</a>
-        </div>
-      </header>
-
       <section class="panel" aria-label="Composer and admin mode">
         <h2>Create content</h2>
         <form id="composerForm" class="composer-form">
-          <label>
-            Post text
-            <textarea id="postText" rows="4" placeholder="Write a post or comment..." required></textarea>
-          </label>
+          <label>Post text<textarea id="postText" rows="4" required></textarea></label>
 
           <div class="form-row">
-            <label>
-              Post type
-              <select id="postType">
-                <option value="post">Post</option>
-                <option value="comment">Comment</option>
+            <label>Image / video<input id="mediaFile" type="file" accept="image/*,video/*" /></label>
+            <label>Carousel files (multi)<input id="carouselFiles" type="file" accept="image/*,video/*" multiple /></label>
+          </div>
+
+          <div class="form-row">
+            <label>Post timestamp (sec)<input id="postTimestamp" type="number" min="0" step="0.1" placeholder="örn. 12.5" /></label>
+            <label>Carousel timestamps (comma)<input id="carouselTimestamps" type="text" placeholder="2, 5.5, 8" /></label>
+          </div>
+
+          <div class="form-row">
+            <label>Media ratio
+              <select id="mediaAspect">
+                <option value="16/9">16:9</option>
+                <option value="9/16">9:16</option>
+                <option value="4/5">4:5</option>
+                <option value="1/1">1:1</option>
               </select>
             </label>
-
-            <label>
-              Parent post (for comments)
-              <select id="parentPostSelect">
-                <option value="">None</option>
-              </select>
-            </label>
           </div>
 
           <div class="form-row">
-            <label>
-              Image / GIF / video thumbnail
-              <input id="mediaFile" type="file" accept="image/*,video/*" />
-            </label>
-
-            <label>
-              Author profile image
-              <input id="authorAvatarFile" type="file" accept="image/*" />
-            </label>
+            <label>Author profile image<input id="authorAvatarFile" type="file" accept="image/*" /></label>
+            <label>Author handle<input id="authorHandle" type="text" value="@studio.pulse" /></label>
           </div>
 
-          <div class="form-row">
-            <label>
-              Author handle
-              <input id="authorHandle" type="text" value="@studio.pulse" />
-            </label>
-
-          </div>
-
-          <label class="checkbox-line">
-            <input id="isSponsored" type="checkbox" />
-            Mark as Sponsored
-          </label>
-
-          <label class="checkbox-line">
-            <input id="isVip" type="checkbox" />
-            Mark as VIP
-          </label>
+          <label class="checkbox-line"><input id="authorRandom" type="checkbox" checked /> Author random nickname</label>
+          <label class="checkbox-line"><input id="isSponsored" type="checkbox" /> Mark as Sponsored</label>
+          <label class="checkbox-line"><input id="isBoosted" type="checkbox" /> Fast likes/reposts popup mode</label>
 
           <button class="publish-btn" type="submit">Publish</button>
         </form>
@@ -118,7 +77,11 @@
           <h2>Manage posts & comments</h2>
           <div id="manageList" class="manage-list"></div>
         </section>
+      </section>
 
+      <section class="panel admin-feed-preview" aria-label="Admin feed preview">
+        <h2>Feed preview</h2>
+        <section id="adminFeed" class="feed"></section>
       </section>
     </main>
 
@@ -127,24 +90,14 @@
         <h2>Manage follow suggestions</h2>
         <form id="suggestionForm" class="composer-form compact">
           <div class="form-row">
-            <label>
-              Handle
-              <input id="suggestionHandle" type="text" placeholder="@new.creator" required />
-            </label>
-            <label>
-              Bio
-              <input id="suggestionBio" type="text" placeholder="short bio" required />
-            </label>
+            <label>Handle<input id="suggestionHandle" type="text" required /></label>
+            <label>Bio<input id="suggestionBio" type="text" required /></label>
           </div>
-          <label>
-            Profile image
-            <input id="suggestionAvatarFile" type="file" accept="image/*" />
-          </label>
+          <label>Profile image<input id="suggestionAvatarFile" type="file" accept="image/*" /></label>
           <button class="publish-btn" type="submit">Add suggestion</button>
         </form>
         <div id="suggestionManageList" class="manage-list"></div>
       </section>
-
       <input id="searchInput" type="text" placeholder="Ara..." class="search-input" />
       <section class="suggestions">
         <h3>Takip önerileri</h3>
@@ -153,6 +106,8 @@
     </aside>
   </div>
 
+  <input id="editAvatarInput" type="file" accept="image/*" hidden />
+  <input id="editMediaInput" type="file" accept="image/*,video/*" hidden />
   <script src="script.js"></script>
 </body>
 </html>

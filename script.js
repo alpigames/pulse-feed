@@ -399,17 +399,26 @@
     const ev = state.timelineEvents.find((x) => x.kind === "post" && x.ts > ts);
     return ev ? ev.ts : null;
   }
+
+  function hideOverlay() {
+    if (!el.timelineOverlay) return;
+    clearTimeout(overlayTimer);
+    el.timelineOverlay.innerHTML = '';
+    el.timelineOverlay.classList.remove('active');
+  }
+
   function showOverlay(html, { sticky = false, duration = 1300 } = {}) {
     if (page !== 'feed' || !el.timelineOverlay) return;
     clearTimeout(overlayTimer);
     clearInterval(boostTimer);
+    el.timelineOverlay.classList.add('active');
     el.timelineOverlay.innerHTML = `<div class="timeline-modal"><button class="overlay-close" type="button" data-close-overlay="1">✕</button>${html}</div>`;
     const commentsNode = el.timelineOverlay.querySelector('.popup-comments');
     if (commentsNode) commentsNode.scrollTop = commentsNode.scrollHeight;
     const video = el.timelineOverlay.querySelector('[data-auto-close-video]');
     if (video) {
       video.addEventListener('ended', () => {
-        if (el.timelineOverlay) el.timelineOverlay.innerHTML = '';
+        hideOverlay();
       }, { once: true });
     }
     const modal = el.timelineOverlay.querySelector('.timeline-modal');
@@ -420,7 +429,7 @@
     }
     if (!sticky) {
       overlayTimer = window.setTimeout(() => {
-        if (el.timelineOverlay) el.timelineOverlay.innerHTML = '';
+        hideOverlay();
       }, duration);
     }
   }
@@ -850,7 +859,7 @@
     document.addEventListener('click', (e) => {
       const closeBtn = e.target.closest('[data-close-overlay]');
       if (!closeBtn) return;
-      if (el.timelineOverlay) el.timelineOverlay.innerHTML = '';
+      hideOverlay();
       state.popupPostId = null;
     });
 
@@ -953,7 +962,7 @@
     audioPlayer.addEventListener('ended', () => {
       if (el.musicToggleBtn) el.musicToggleBtn.textContent = '▶';
       autoRecordStop();
-      if (el.timelineOverlay) el.timelineOverlay.innerHTML = '';
+      hideOverlay();
     });
 
     audioPlayer.addEventListener('pause', autoRecordStop);

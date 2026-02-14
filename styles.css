@@ -54,7 +54,8 @@ textarea{min-height:110px;resize:vertical}
 .player-main-btn{width:62px;height:62px;border-radius:50%;background:#1a1f2b;color:#fff;font-size:1.4rem}
 .player-icon-btn{font-size:1.45rem}
 .admin-feed-preview{margin-top:10px}
-.timeline-overlay{position:fixed;inset:0;pointer-events:auto;display:grid;place-items:center;z-index:50}
+.timeline-overlay{position:fixed;inset:0;pointer-events:none;display:grid;place-items:center;z-index:50;opacity:0;visibility:hidden}
+.timeline-overlay.active{pointer-events:auto;opacity:1;visibility:visible}
 .timeline-modal{width:min(1120px,96vw);max-height:94vh;overflow:auto;padding:18px;border-radius:16px;background:rgba(5,7,12,.97);border:1px solid #32436d;box-shadow:0 20px 60px rgba(0,0,0,.55);transform:scale(.92);opacity:0;animation:pop .24s ease forwards}
 @keyframes pop{to{transform:scale(1);opacity:1}}
 .timeline-head{font-size:.9rem;color:#8fa5dd;letter-spacing:.08em;text-transform:uppercase}

@@ -12,6 +12,8 @@ body{padding:12px}
 .menu a{text-decoration:none;border-radius:10px;padding:10px 12px;font-size:1.35rem;display:flex;align-items:center;justify-content:flex-start;gap:8px}
 .menu-icon{display:inline-block;width:56px;font-size:2.4rem;line-height:1}
 .menu-icon.small-icon{font-size:1.9rem}
+.menu-icon.home-icon{font-size:1.75rem;display:grid;place-items:center}
+.menu-icon.explore-icon{font-size:1.45rem;display:grid;place-items:center}
 .app-shell{width:100%}
 .panel{border-radius:14px;padding:12px;margin-bottom:10px}
 h2{margin:0 0 10px;font-size:1.75rem}
@@ -35,7 +37,7 @@ textarea{min-height:110px;resize:vertical}
 .carousel-preview span{font-size:.85rem;padding:4px 8px;border:1px solid #2b2b2b;border-radius:999px}
 .post-actions{display:flex;gap:16px;margin-top:8px;font-size:.95rem}
 .suggestions{border-top:1px solid var(--line);padding-top:12px}
-.suggestion-item{border-radius:10px;padding:10px;margin-top:8px;display:grid;grid-template-columns:auto 1fr;align-items:start;gap:10px}
+.suggestion-item{border-radius:10px;padding:10px;margin-top:8px;display:grid;gap:10px}
 .search-input{width:100%;border-radius:10px;padding:11px;margin-bottom:10px}
 .feed-controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:10px}
 .avatar{width:52px;height:52px;border-radius:50%;object-fit:cover;border:1px solid #303030}
@@ -86,8 +88,9 @@ body[data-page="feed"] .feed-controls{position:sticky;top:0;background:#000;z-in
 .media-box{width:100%;overflow:hidden;border-radius:10px;border:1px solid #262626;margin-top:8px}
 .media-box .media{width:100%;height:100%;object-fit:cover;margin-top:0;border-radius:0;max-height:none}
 .vip-badge{display:inline-flex;vertical-align:middle;margin-left:6px}
-.vip-ring{width:18px;height:18px;border-radius:50%;display:inline-grid;place-items:center;border:1px solid #0f5a2c;background:#103c20}
-.vip-pulse{width:8px;height:8px;border-radius:50%;background:#0f5a2c;box-shadow:0 0 0 2px #0f5a2c88}
+.vip-crown{width:18px;height:18px;display:block}
 .vip-menu-icon{width:56px;display:inline-grid;place-items:center}
-.suggestion-body{display:grid;gap:4px}
+.vip-pill{margin-left:8px;padding:2px 8px;border-radius:999px;border:1px solid #1f7a3f;background:#0d4a27;color:#d7ffe8;font-size:.72rem;font-weight:700}
+.suggestion-head{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:10px}
+.suggestion-body{display:grid;gap:3px}
 .follow-btn{margin-top:6px;width:100%;border:1px solid #155f32;background:#0f5a2c;color:#fff;border-radius:10px;padding:10px 12px;font-weight:700}

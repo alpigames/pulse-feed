@@ -152,7 +152,7 @@
       return `<article class="post-card" data-post-id="${p.id}">
         <header class="post-head">
           <img class="avatar ${isAdminPreview ? 'editable-avatar' : ''}" src="${avatar}" alt="${esc(p.author)} avatar" ${isAdminPreview ? `data-edit-avatar="${p.id}"` : ''} />
-          <p class="meta-row"><strong>${esc(p.author)}</strong>${p.vip ? ` <span class="vip-badge"><span class="vip-ring"><span class="vip-pulse"></span></span></span>` : ""} <span class="timestamp">· ${timeAgo(p.createdAt)}</span></p>
+          <p class="meta-row"><strong>${esc(p.author)}</strong>${p.vip ? ` <span class="vip-badge"><img src="vip-crown.svg" alt="VIP" class="vip-crown" /></span>` : ""} <span class="timestamp">· ${timeAgo(p.createdAt)}</span></p>
         </header>
         <p class="post-text ${isAdminPreview ? 'editable-text' : ''}" ${isAdminPreview ? `data-edit-text="${p.id}"` : ''}>${esc(p.text)}</p>
         <div ${isAdminPreview ? `data-edit-media="${p.id}" class="editable-media-wrap"` : ''}>${mediaNode({ src: p.media, mediaType: p.mediaType })}</div>
@@ -179,7 +179,7 @@
     const q = (el.searchInput?.value || '').toLowerCase();
     el.suggestionsList.innerHTML = state.suggestions
       .filter((s) => !q || s.handle.toLowerCase().includes(q) || s.bio.toLowerCase().includes(q))
-      .map((s) => `<article class="suggestion-item"><img class="avatar mini" src="${s.avatar || avatarFor(s.handle)}" alt="${esc(s.handle)} avatar" /><div class="suggestion-body"><p><strong>${esc(s.handle)}</strong></p><small>${esc(s.bio)}</small><button type="button" class="follow-btn">Takip Et</button></div></article>`)
+      .map((s) => `<article class="suggestion-item"><div class="suggestion-head"><img class="avatar mini" src="${s.avatar || avatarFor(s.handle)}" alt="${esc(s.handle)} avatar" /><div class="suggestion-body"><p><strong>${esc(s.handle)}</strong></p><small>${esc(s.bio)}</small></div></div><button type="button" class="follow-btn">Takip Et</button></article>`)
       .join('');
   }
 
@@ -261,8 +261,8 @@
       sponsored: Boolean(el.isSponsored.checked),
       vip: !el.authorRandom?.checked && Boolean(el.authorHandle.value.trim()),
       boosted: Boolean(el.isBoosted.checked),
-      likes: Math.floor(900 + (Math.random() * 14000)),
-      reposts: Math.floor(140 + (Math.random() * 6200)),
+      likes: (!el.authorRandom?.checked && Boolean(el.authorHandle.value.trim())) ? Math.floor(22000 + (Math.random() * 56000)) : Math.floor(900 + (Math.random() * 14000)),
+      reposts: (!el.authorRandom?.checked && Boolean(el.authorHandle.value.trim())) ? Math.floor(7000 + (Math.random() * 24000)) : Math.floor(140 + (Math.random() * 6200)),
       aspectRatio: (el.mediaAspect?.value || "16/9"),
       createdAt: Date.now(),
     });
@@ -396,6 +396,11 @@
 
   let overlayTimer = 0;
   let boostTimer = 0;
+
+  function nextPostTsAfter(ts) {
+    const ev = state.timelineEvents.find((x) => x.kind === "post" && x.ts > ts);
+    return ev ? ev.ts : null;
+  }
   function showOverlay(html, duration = 1300) {
     if (page !== 'feed' || !el.timelineOverlay) return;
     clearTimeout(overlayTimer);
@@ -423,7 +428,12 @@
       const hasTimedComments = commentsFor(ev.post.id).some((c) => Number.isFinite(c.timestampSec));
       if (ev.post.boosted) {
         if (!state.activeBoostIds) state.activeBoostIds = [];
+        if (!state.activeBoostCfg) state.activeBoostCfg = {};
         if (!state.activeBoostIds.includes(ev.post.id)) state.activeBoostIds.push(ev.post.id);
+        state.activeBoostCfg[ev.post.id] = {
+          endAt: ev.ts + 4.5,
+          stopAtNextPostTs: nextPostTsAfter(ev.ts),
+        };
       }
       if (hasTimedComments || ev.post.mediaType === 'video') {
         const media = ev.post.mediaType === 'video'
@@ -769,14 +779,21 @@
         const active = state.activeBoostIds || [];
         if (active.length) {
           let changed = false;
-          for (const id of active) {
-            if (!state.visiblePostIds.includes(id)) continue;
+          const nowTs = audioPlayer.currentTime || 0;
+          state.activeBoostIds = active.filter((id) => {
+            const cfg = state.activeBoostCfg?.[id] || null;
+            if (cfg) {
+              if (nowTs >= cfg.endAt) return false;
+              if (Number.isFinite(cfg.stopAtNextPostTs) && nowTs >= cfg.stopAtNextPostTs) return false;
+            }
+            if (!state.visiblePostIds.includes(id)) return true;
             const post = state.posts.find((x) => x.id === id && x.type === 'post');
-            if (!post) continue;
-            post.likes += Math.floor(4 + (Math.random() * 31));
-            post.reposts += Math.floor(2 + (Math.random() * 14));
+            if (!post) return false;
+            post.likes += Math.floor(25 + (Math.random() * 90));
+            post.reposts += Math.floor(8 + (Math.random() * 35));
             changed = true;
-          }
+            return true;
+          });
           if (changed) renderFeed(el.feed);
         }
         state.lastBoostAt = now;

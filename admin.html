@@ -17,8 +17,8 @@
       <nav class="menu" aria-label="Main menu">
         <a href="feed.html"><span class="menu-icon">⌂</span>Anasayfa</a>
         <a href="feed.html"><span class="menu-icon">#</span>Keşfet</a>
-        <a href="feed.html"><span class="menu-icon small-icon">◉</span>Bildirimler</a>
         <a href="feed.html"><span class="menu-icon small-icon">✉</span>Mesajlar</a>
+        <a href="feed.html"><span class="menu-icon vip-menu-icon"><span class="vip-ring"><span class="vip-pulse"></span></span></span>Premium</a>
       </nav>
 
       <section class="music-upload manager" aria-label="Müzik yönetimi">
@@ -51,13 +51,23 @@
           </div>
 
           <div class="form-row">
+            <label>Media ratio
+              <select id="mediaAspect">
+                <option value="16/9">16:9</option>
+                <option value="9/16">9:16</option>
+                <option value="4/5">4:5</option>
+                <option value="1/1">1:1</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="form-row">
             <label>Author profile image<input id="authorAvatarFile" type="file" accept="image/*" /></label>
             <label>Author handle<input id="authorHandle" type="text" value="@studio.pulse" /></label>
           </div>
 
           <label class="checkbox-line"><input id="authorRandom" type="checkbox" checked /> Author random nickname</label>
           <label class="checkbox-line"><input id="isSponsored" type="checkbox" /> Mark as Sponsored</label>
-          <label class="checkbox-line"><input id="isVip" type="checkbox" /> Mark as VIP</label>
           <label class="checkbox-line"><input id="isBoosted" type="checkbox" /> Fast likes/reposts popup mode</label>
 
           <button class="publish-btn" type="submit">Publish</button>

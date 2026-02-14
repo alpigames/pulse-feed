@@ -18,7 +18,7 @@
     nickPool: [],
   };
 
-  const ids = ['composerForm','postText','postType','parentPostSelect','mediaFile','carouselFiles','carouselTimestamps','postTimestamp','authorAvatarFile','authorHandle','authorRandom','isSponsored','isVip','isBoosted','feed','adminFeed','manageList','suggestionForm','suggestionHandle','suggestionBio','suggestionAvatarFile','suggestionManageList','suggestionsList','searchInput','autoScrollEnabled','scrollSpeed','pauseAtPosts','musicForm','musicTitle','musicArtist','musicFile','musicManageList','musicTrackSelect','musicToggleBtn','musicPrevBtn','musicNextBtn','musicTrackTitle','musicTrackSinger','musicProgress','musicCurrentTime','musicDuration','musicVisualizer','timelineOverlay','recordToggleBtn','editAvatarInput','editMediaInput'];
+  const ids = ['composerForm','postText','postType','parentPostSelect','mediaFile','carouselFiles','carouselTimestamps','postTimestamp','mediaAspect','authorAvatarFile','authorHandle','authorRandom','isSponsored','isBoosted','feed','adminFeed','manageList','suggestionForm','suggestionHandle','suggestionBio','suggestionAvatarFile','suggestionManageList','suggestionsList','searchInput','autoScrollEnabled','scrollSpeed','pauseAtPosts','musicForm','musicTitle','musicArtist','musicFile','musicManageList','musicTrackSelect','musicToggleBtn','musicPrevBtn','musicNextBtn','musicTrackTitle','musicTrackSinger','musicProgress','musicCurrentTime','musicDuration','musicVisualizer','timelineOverlay','recordToggleBtn','editAvatarInput','editMediaInput'];
   const el = Object.fromEntries(ids.map((id) => [id, document.getElementById(id)]));
 
   const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -152,11 +152,11 @@
       return `<article class="post-card" data-post-id="${p.id}">
         <header class="post-head">
           <img class="avatar ${isAdminPreview ? 'editable-avatar' : ''}" src="${avatar}" alt="${esc(p.author)} avatar" ${isAdminPreview ? `data-edit-avatar="${p.id}"` : ''} />
-          <p class="meta-row"><strong>${esc(p.author)}</strong> <span class="timestamp">· ${timeAgo(p.createdAt)}</span></p>
+          <p class="meta-row"><strong>${esc(p.author)}</strong>${p.vip ? ` <span class="vip-badge"><span class="vip-ring"><span class="vip-pulse"></span></span></span>` : ""} <span class="timestamp">· ${timeAgo(p.createdAt)}</span></p>
         </header>
         <p class="post-text ${isAdminPreview ? 'editable-text' : ''}" ${isAdminPreview ? `data-edit-text="${p.id}"` : ''}>${esc(p.text)}</p>
         <div ${isAdminPreview ? `data-edit-media="${p.id}" class="editable-media-wrap"` : ''}>${mediaNode({ src: p.media, mediaType: p.mediaType })}</div>
-        <div class="post-actions"><span>❤ ${p.likes || 0}</span><span>↻ ${p.reposts || 0}</span></div>
+        <div class="post-actions"><span data-like-id="${p.id}">❤ ${p.likes || 0}</span><span data-repost-id="${p.id}">↻ ${p.reposts || 0}</span></div>
         ${isAdminPreview ? `<div class="quick-comment-wrap" data-quick-wrap="${p.id}"><button class="publish-btn quick-comment-btn" type="button" data-quick-comment="${p.id}">+ Hızlı yorum</button><form class="quick-comment-form" data-quick-form="${p.id}"><textarea rows="2" placeholder="Yorum metni" data-quick-text="${p.id}"></textarea><input type="number" min="0" step="0.1" placeholder="Zaman damgası (sn)" data-quick-ts="${p.id}" /><div class="quick-comment-actions"><button class="publish-btn" type="submit">Ekle</button><button class="delete-btn" type="button" data-quick-cancel="${p.id}">Kapat</button></div></form></div>` : ''}
         <section class="comments">
           ${shownComments.map((c) => {
@@ -179,7 +179,7 @@
     const q = (el.searchInput?.value || '').toLowerCase();
     el.suggestionsList.innerHTML = state.suggestions
       .filter((s) => !q || s.handle.toLowerCase().includes(q) || s.bio.toLowerCase().includes(q))
-      .map((s) => `<article class="suggestion-item"><img class="avatar mini" src="${s.avatar || avatarFor(s.handle)}" alt="${esc(s.handle)} avatar" /><div><p><strong>${esc(s.handle)}</strong></p><small>${esc(s.bio)}</small></div><button type="button">Takip et</button></article>`)
+      .map((s) => `<article class="suggestion-item"><img class="avatar mini" src="${s.avatar || avatarFor(s.handle)}" alt="${esc(s.handle)} avatar" /><div class="suggestion-body"><p><strong>${esc(s.handle)}</strong></p><small>${esc(s.bio)}</small><button type="button" class="follow-btn">Takip Et</button></div></article>`)
       .join('');
   }
 
@@ -259,10 +259,11 @@
       carousel,
       timestampSec: Number.isFinite(Number(el.postTimestamp?.value)) ? Number(el.postTimestamp.value) : null,
       sponsored: Boolean(el.isSponsored.checked),
-      vip: Boolean(el.isVip.checked),
+      vip: !el.authorRandom?.checked && Boolean(el.authorHandle.value.trim()),
       boosted: Boolean(el.isBoosted.checked),
-      likes: 12,
-      reposts: 3,
+      likes: Math.floor(900 + (Math.random() * 14000)),
+      reposts: Math.floor(140 + (Math.random() * 6200)),
+      aspectRatio: (el.mediaAspect?.value || "16/9"),
       createdAt: Date.now(),
     });
 
@@ -382,7 +383,15 @@
     if (page !== 'feed' || !el.feed) return;
     const node = el.feed.querySelector(`[data-post-id="${postId}"]`);
     if (!node) return;
-    node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const scrollParent = el.feed.closest('.panel');
+    if (!scrollParent) {
+      node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    const nodeRect = node.getBoundingClientRect();
+    const parentRect = scrollParent.getBoundingClientRect();
+    const delta = (nodeRect.top - parentRect.top) - ((parentRect.height / 2) - (nodeRect.height / 2));
+    scrollParent.scrollBy({ top: delta, behavior: 'smooth' });
   }
 
   let overlayTimer = 0;
@@ -413,16 +422,10 @@
 
       const hasTimedComments = commentsFor(ev.post.id).some((c) => Number.isFinite(c.timestampSec));
       if (ev.post.boosted) {
-        showOverlay(`<h2>${esc(ev.post.text)}</h2><p id="boostCounts">❤ ${ev.post.likes} · ↻ ${ev.post.reposts}</p>`, dur);
-        let likes = ev.post.likes;
-        let reposts = ev.post.reposts;
-        boostTimer = window.setInterval(() => {
-          likes += Math.floor(Math.random() * 22) + 8;
-          reposts += Math.floor(Math.random() * 11) + 4;
-          const node = document.getElementById('boostCounts');
-          if (node) node.textContent = `❤ ${likes} · ↻ ${reposts}`;
-        }, 90);
-      } else if (hasTimedComments || ev.post.mediaType === 'video') {
+        if (!state.activeBoostIds) state.activeBoostIds = [];
+        if (!state.activeBoostIds.includes(ev.post.id)) state.activeBoostIds.push(ev.post.id);
+      }
+      if (hasTimedComments || ev.post.mediaType === 'video') {
         const media = ev.post.mediaType === 'video'
           ? `<video class="timeline-media" src="${ev.post.media}" autoplay muted playsinline controls></video>`
           : mediaNode({ src: ev.post.media, mediaType: ev.post.mediaType }, 'timeline-media');
@@ -755,9 +758,29 @@
   }
 
   function tick(now) {
-    if (page === 'feed' && state.autoScroll) {
-      const delta = (now - state.lastTime) / 1000;
-      window.scrollBy(0, state.speedPxPerSecond * delta);
+    if (page === 'feed') {
+      const panel = el.feed?.closest('.panel');
+      if (state.autoScroll && panel) {
+        const delta = (now - state.lastTime) / 1000;
+        panel.scrollBy(0, state.speedPxPerSecond * delta);
+      }
+      if (!state.lastBoostAt) state.lastBoostAt = now;
+      if (now - state.lastBoostAt > 650) {
+        const active = state.activeBoostIds || [];
+        if (active.length) {
+          let changed = false;
+          for (const id of active) {
+            if (!state.visiblePostIds.includes(id)) continue;
+            const post = state.posts.find((x) => x.id === id && x.type === 'post');
+            if (!post) continue;
+            post.likes += Math.floor(4 + (Math.random() * 31));
+            post.reposts += Math.floor(2 + (Math.random() * 14));
+            changed = true;
+          }
+          if (changed) renderFeed(el.feed);
+        }
+        state.lastBoostAt = now;
+      }
     }
     state.lastTime = now;
     requestAnimationFrame(tick);

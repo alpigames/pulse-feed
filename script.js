@@ -23,6 +23,7 @@
 
   const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const esc = (s) => String(s).replace(/[&<>"']/g, (m) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+  const formatText = (text) => esc(text).replace(/(^|\s)(@\+[a-zA-Z0-9_.-]+)/g, '$1<span class="mention-plus">$2</span>');
   const timeAgo = (ts) => `${Math.max(1, Math.floor((Date.now() - ts) / 60000))}m`;
   const fmt = (v) => { const t = Math.floor(v || 0); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`; };
   const avatarFor = (h) => `https://api.dicebear.com/9.x/thumbs/svg?seed=${encodeURIComponent(String(h || 'user').replace('@', ''))}`;
@@ -154,14 +155,14 @@
           <img class="avatar ${isAdminPreview ? 'editable-avatar' : ''}" src="${avatar}" alt="${esc(p.author)} avatar" ${isAdminPreview ? `data-edit-avatar="${p.id}"` : ''} />
           <p class="meta-row"><strong>${esc(p.author)}</strong>${p.vip ? ` <span class="vip-badge"><img src="vip-crown.svg" alt="VIP" class="vip-crown" /></span>` : ""} <span class="timestamp">· ${timeAgo(p.createdAt)}</span></p>
         </header>
-        <p class="post-text ${isAdminPreview ? 'editable-text' : ''}" ${isAdminPreview ? `data-edit-text="${p.id}"` : ''}>${esc(p.text)}</p>
+        <p class="post-text ${isAdminPreview ? 'editable-text' : ''}" ${isAdminPreview ? `data-edit-text="${p.id}"` : ''}>${formatText(p.text)}</p>
         <div ${isAdminPreview ? `data-edit-media="${p.id}" class="editable-media-wrap"` : ''}>${mediaNode({ src: p.media, mediaType: p.mediaType })}</div>
         <div class="post-actions"><span data-like-id="${p.id}">❤ ${p.likes || 0}</span><span data-repost-id="${p.id}">↻ ${p.reposts || 0}</span></div>
         ${isAdminPreview ? `<div class="quick-comment-wrap" data-quick-wrap="${p.id}"><button class="publish-btn quick-comment-btn" type="button" data-quick-comment="${p.id}">+ Hızlı yorum</button><form class="quick-comment-form" data-quick-form="${p.id}"><textarea rows="2" placeholder="Yorum metni" data-quick-text="${p.id}"></textarea><input type="number" min="0" step="0.1" placeholder="Zaman damgası (sn)" data-quick-ts="${p.id}" /><div class="quick-comment-actions"><button class="publish-btn" type="submit">Ekle</button><button class="delete-btn" type="button" data-quick-cancel="${p.id}">Kapat</button></div></form></div>` : ''}
         <section class="comments">
           ${shownComments.map((c) => {
             const cAvatar = c.authorAvatar || avatarFor(c.author);
-            return `<p class="comment"><img class="avatar mini" src="${cAvatar}" alt="${esc(c.author)} avatar" /><span><strong>${esc(c.author)}</strong>: ${esc(c.text)}</span></p>`;
+            return `<p class="comment"><img class="avatar mini" src="${cAvatar}" alt="${esc(c.author)} avatar" /><span><strong>${esc(c.author)}</strong>: ${formatText(c.text)}</span></p>`;
           }).join('')}
           ${typing ? `<div class="typing-bubble"><img class="avatar mini" src="${typing.avatar}" alt="typing avatar" /><span><strong>${esc(typing.author)}</strong> yazıyor</span><i></i><i></i><i></i></div>` : ''}
         </section>
@@ -383,15 +384,9 @@
     if (page !== 'feed' || !el.feed) return;
     const node = el.feed.querySelector(`[data-post-id="${postId}"]`);
     if (!node) return;
-    const scrollParent = el.feed.closest('.panel');
-    if (!scrollParent) {
-      node.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      return;
-    }
-    const nodeRect = node.getBoundingClientRect();
-    const parentRect = scrollParent.getBoundingClientRect();
-    const delta = (nodeRect.top - parentRect.top) - ((parentRect.height / 2) - (nodeRect.height / 2));
-    scrollParent.scrollBy({ top: delta, behavior: 'smooth' });
+    const rect = node.getBoundingClientRect();
+    const delta = rect.top - ((window.innerHeight / 2) - (rect.height / 2));
+    window.scrollBy({ top: delta, behavior: 'smooth' });
   }
 
   let overlayTimer = 0;
@@ -401,20 +396,44 @@
     const ev = state.timelineEvents.find((x) => x.kind === "post" && x.ts > ts);
     return ev ? ev.ts : null;
   }
-  function showOverlay(html, duration = 1300) {
+  function showOverlay(html, { sticky = false, duration = 1300 } = {}) {
     if (page !== 'feed' || !el.timelineOverlay) return;
     clearTimeout(overlayTimer);
     clearInterval(boostTimer);
     el.timelineOverlay.innerHTML = `<div class="timeline-modal">${html}</div>`;
-    overlayTimer = window.setTimeout(() => {
-      if (el.timelineOverlay) el.timelineOverlay.innerHTML = '';
-    }, duration);
+    const commentsNode = el.timelineOverlay.querySelector('.popup-comments');
+    if (commentsNode) commentsNode.scrollTop = commentsNode.scrollHeight;
+    const video = el.timelineOverlay.querySelector('[data-auto-close-video]');
+    if (video) {
+      video.addEventListener('ended', () => {
+        if (el.timelineOverlay) el.timelineOverlay.innerHTML = '';
+      }, { once: true });
+    }
+    if (!sticky) {
+      overlayTimer = window.setTimeout(() => {
+        if (el.timelineOverlay) el.timelineOverlay.innerHTML = '';
+      }, duration);
+    }
   }
 
   function nextTimedComment(post, currentTs) {
     return commentsFor(post.id)
       .filter((c) => Number.isFinite(c.timestampSec) && c.timestampSec > currentTs)
       .sort((a, b) => a.timestampSec - b.timestampSec)[0] || null;
+  }
+
+
+  function popupHtmlForPost(post) {
+    const comments = commentsFor(post.id).filter((c) => (state.visibleComments[post.id] || []).includes(c.id));
+    const typing = state.typingComments[post.id];
+    const mainMedia = post.mediaType === 'video'
+      ? (post.media ? `<video class="timeline-media" src="${post.media}" autoplay muted playsinline controls data-auto-close-video="1"></video>` : '')
+      : (post.media ? `<div class="popup-media-box">${mediaNode({ src: post.media, mediaType: post.mediaType }, 'timeline-media')}</div>` : '');
+    const carousel = (post.carousel || []).length
+      ? `<div class="popup-carousel-track">${post.carousel.map((it) => `<div class="popup-carousel-item">${mediaNode(it, 'timeline-media')}</div>`).join('')}</div>`
+      : '';
+    const commentsHtml = `<div class="popup-comments">${comments.map((c) => `<p class="comment"><img class="avatar mini" src="${c.authorAvatar || avatarFor(c.author)}" alt="${esc(c.author)} avatar" /><span><strong>${esc(c.author)}</strong>: ${formatText(c.text)}</span></p>`).join('')}${typing ? `<div class="typing-bubble"><img class="avatar mini" src="${typing.avatar}" alt="typing avatar" /><span><strong>${esc(typing.author)}</strong> yazıyor</span><i></i><i></i><i></i></div>` : ''}</div>`;
+    return `<div class="popup-post"><h3>${esc(post.author)}</h3><p>${formatText(post.text)}</p>${mainMedia}${carousel}${commentsHtml}</div>`;
   }
 
   function triggerEvent(ev, nextTs) {
@@ -435,12 +454,8 @@
           stopAtNextPostTs: nextPostTsAfter(ev.ts),
         };
       }
-      if (hasTimedComments || ev.post.mediaType === 'video') {
-        const media = ev.post.mediaType === 'video'
-          ? `<video class="timeline-media" src="${ev.post.media}" autoplay muted playsinline controls></video>`
-          : mediaNode({ src: ev.post.media, mediaType: ev.post.mediaType }, 'timeline-media');
-        showOverlay(`<h3>${esc(ev.post.author)}</h3><p>${esc(ev.post.text)}</p>${media}`, dur);
-      }
+      state.popupPostId = ev.post.id;
+      showOverlay(popupHtmlForPost(ev.post), { sticky: true, duration: dur });
       return;
     }
 
@@ -461,11 +476,15 @@
 
       refresh();
       centerPost(ev.post.id);
+      if (state.popupPostId === ev.post.id) {
+        showOverlay(popupHtmlForPost(ev.post), { sticky: true, duration: dur });
+      }
       return;
     }
 
     if (ev.kind === 'carousel') {
-      showOverlay(`${mediaNode(ev.item, 'timeline-media')}<p>${esc(ev.post.text)}</p>`, dur);
+      state.popupPostId = ev.post.id;
+      showOverlay(popupHtmlForPost(ev.post), { sticky: true, duration: dur });
     }
   }
 
@@ -769,10 +788,9 @@
 
   function tick(now) {
     if (page === 'feed') {
-      const panel = el.feed?.closest('.panel');
-      if (state.autoScroll && panel) {
+      if (state.autoScroll) {
         const delta = (now - state.lastTime) / 1000;
-        panel.scrollBy(0, state.speedPxPerSecond * delta);
+        window.scrollBy(0, state.speedPxPerSecond * delta);
       }
       if (!state.lastBoostAt) state.lastBoostAt = now;
       if (now - state.lastBoostAt > 650) {

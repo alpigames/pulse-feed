@@ -157,11 +157,14 @@
         </header>
         <p class="post-text ${isAdminPreview ? 'editable-text' : ''}" ${isAdminPreview ? `data-edit-text="${p.id}"` : ''}>${formatText(p.text)}</p>
         <div ${isAdminPreview ? `data-edit-media="${p.id}" class="editable-media-wrap"` : ''}>${mediaNode({ src: p.media, mediaType: p.mediaType })}</div>
-        <div class="post-actions"><span data-like-id="${p.id}">❤ ${p.likes || 0}</span><span data-repost-id="${p.id}">↻ ${p.reposts || 0}</span></div>
+        <div class="post-actions"><span data-like-id="${p.id}">❤ ${p.likes || 0}</span><span data-repost-id="${p.id}">↻ ${p.reposts || 0}</span></div>${isAdminPreview ? `<div class="admin-ts-row"><label>TS <input type="number" step="0.1" min="0" value="${Number.isFinite(p.timestampSec) ? p.timestampSec : ""}" data-edit-post-ts="${p.id}" /></label><button type="button" class="publish-btn" data-save-post-ts="${p.id}">Kaydet</button></div>` : ""}
         ${isAdminPreview ? `<div class="quick-comment-wrap" data-quick-wrap="${p.id}"><button class="publish-btn quick-comment-btn" type="button" data-quick-comment="${p.id}">+ Hızlı yorum</button><form class="quick-comment-form" data-quick-form="${p.id}"><textarea rows="2" placeholder="Yorum metni" data-quick-text="${p.id}"></textarea><input type="number" min="0" step="0.1" placeholder="Zaman damgası (sn)" data-quick-ts="${p.id}" /><div class="quick-comment-actions"><button class="publish-btn" type="submit">Ekle</button><button class="delete-btn" type="button" data-quick-cancel="${p.id}">Kapat</button></div></form></div>` : ''}
         <section class="comments">
           ${shownComments.map((c) => {
             const cAvatar = c.authorAvatar || avatarFor(c.author);
+            if (isAdminPreview) {
+              return `<div class="comment comment-edit" data-comment-id="${c.id}"><img class="avatar mini editable-comment-avatar" src="${cAvatar}" alt="${esc(c.author)} avatar" data-edit-comment-avatar="${c.id}" /><div class="comment-edit-fields"><input type="text" value="${esc(c.author)}" data-edit-comment-author="${c.id}" /><input type="number" step="0.1" min="0" value="${Number.isFinite(c.timestampSec) ? c.timestampSec : ''}" data-edit-comment-ts="${c.id}" /><textarea rows="2" data-edit-comment-text="${c.id}">${esc(c.text)}</textarea><button type="button" class="publish-btn" data-save-comment="${c.id}">Yorumu Kaydet</button></div></div>`;
+            }
             return `<p class="comment"><img class="avatar mini" src="${cAvatar}" alt="${esc(c.author)} avatar" /><span><strong>${esc(c.author)}</strong>: ${formatText(c.text)}</span></p>`;
           }).join('')}
           ${typing ? `<div class="typing-bubble"><img class="avatar mini" src="${typing.avatar}" alt="typing avatar" /><span><strong>${esc(typing.author)}</strong> yazıyor</span><i></i><i></i><i></i></div>` : ''}
@@ -400,7 +403,7 @@
     if (page !== 'feed' || !el.timelineOverlay) return;
     clearTimeout(overlayTimer);
     clearInterval(boostTimer);
-    el.timelineOverlay.innerHTML = `<div class="timeline-modal">${html}</div>`;
+    el.timelineOverlay.innerHTML = `<div class="timeline-modal"><button class="overlay-close" type="button" data-close-overlay="1">✕</button>${html}</div>`;
     const commentsNode = el.timelineOverlay.querySelector('.popup-comments');
     if (commentsNode) commentsNode.scrollTop = commentsNode.scrollHeight;
     const video = el.timelineOverlay.querySelector('[data-auto-close-video]');
@@ -408,6 +411,12 @@
       video.addEventListener('ended', () => {
         if (el.timelineOverlay) el.timelineOverlay.innerHTML = '';
       }, { once: true });
+    }
+    const modal = el.timelineOverlay.querySelector('.timeline-modal');
+    if (modal) {
+      modal.addEventListener('wheel', (ev) => {
+        ev.stopPropagation();
+      }, { passive: true });
     }
     if (!sticky) {
       overlayTimer = window.setTimeout(() => {
@@ -650,6 +659,47 @@
           return;
         }
 
+
+        const savePostTs = e.target.closest('[data-save-post-ts]');
+        if (savePostTs) {
+          const id = savePostTs.dataset.savePostTs;
+          const post = state.posts.find((x) => x.id === id && x.type === 'post');
+          const input = el.adminFeed.querySelector(`[data-edit-post-ts="${id}"]`);
+          if (post && input) {
+            const val = Number(input.value);
+            post.timestampSec = Number.isFinite(val) ? val : null;
+            persistPostAndSuggestions();
+            buildTimeline();
+            refresh();
+          }
+          return;
+        }
+
+        const saveComment = e.target.closest('[data-save-comment]');
+        if (saveComment) {
+          const id = saveComment.dataset.saveComment;
+          const comment = state.posts.find((x) => x.id === id && x.type === 'comment');
+          if (!comment) return;
+          const authorInput = el.adminFeed.querySelector(`[data-edit-comment-author="${id}"]`);
+          const tsInput = el.adminFeed.querySelector(`[data-edit-comment-ts="${id}"]`);
+          const textInput = el.adminFeed.querySelector(`[data-edit-comment-text="${id}"]`);
+          comment.author = (authorInput?.value || comment.author).trim() || comment.author;
+          const tsVal = Number(tsInput?.value);
+          comment.timestampSec = Number.isFinite(tsVal) ? tsVal : null;
+          comment.text = (textInput?.value || comment.text).trim() || comment.text;
+          persistPostAndSuggestions();
+          buildTimeline();
+          refresh();
+          return;
+        }
+
+        const editCommentAvatar = e.target.closest('[data-edit-comment-avatar]');
+        if (editCommentAvatar && el.editAvatarInput) {
+          el.editAvatarInput.dataset.commentId = editCommentAvatar.dataset.editCommentAvatar;
+          el.editAvatarInput.dataset.postId = '';
+          el.editAvatarInput.click();
+          return;
+        }
         const quick = e.target.closest('[data-quick-comment]');
         if (quick) {
           const wrap = el.adminFeed.querySelector(`[data-quick-wrap="${quick.dataset.quickComment}"]`);
@@ -709,14 +759,21 @@
 
       if (el.editAvatarInput) {
         el.editAvatarInput.addEventListener('change', async () => {
-          const id = el.editAvatarInput.dataset.postId;
-          const post = state.posts.find((x) => x.id === id && x.type === 'post');
+          const postId = el.editAvatarInput.dataset.postId;
+          const commentId = el.editAvatarInput.dataset.commentId;
           const file = el.editAvatarInput.files?.[0] || null;
-          if (!post || !file) return;
-          post.authorAvatar = await toDataUrl(file);
+          if (!file) return;
+          if (commentId) {
+            const comment = state.posts.find((x) => x.id === commentId && x.type === 'comment');
+            if (comment) comment.authorAvatar = await toDataUrl(file);
+          } else if (postId) {
+            const post = state.posts.find((x) => x.id === postId && x.type === 'post');
+            if (post) post.authorAvatar = await toDataUrl(file);
+          }
           persistPostAndSuggestions();
           refresh();
           el.editAvatarInput.value = '';
+          el.editAvatarInput.dataset.commentId = '';
         });
       }
 
@@ -789,6 +846,13 @@
         if (recorder) stopRecording(); else void startRecording();
       });
     }
+
+    document.addEventListener('click', (e) => {
+      const closeBtn = e.target.closest('[data-close-overlay]');
+      if (!closeBtn) return;
+      if (el.timelineOverlay) el.timelineOverlay.innerHTML = '';
+      state.popupPostId = null;
+    });
 
     if (el.searchInput) el.searchInput.addEventListener('input', renderSuggestions);
     if (el.autoScrollEnabled) el.autoScrollEnabled.addEventListener('change', () => { state.autoScroll = el.autoScrollEnabled.checked; });

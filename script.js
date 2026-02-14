@@ -455,18 +455,14 @@
   }
 
   function triggerEvent(ev, nextTs) {
-    const dur = Math.max(500, ((nextTs ?? (ev.ts + 2)) - ev.ts) * 1000 - 80);
+    void nextTs;
+    hideOverlay();
+    state.popupPostId = null;
 
     if (ev.kind === 'post') {
-      const hasTimedComments = commentsFor(ev.post.id).some((c) => Number.isFinite(c.timestampSec));
-      if (hasTimedComments) {
-        state.activeCommentFlows[ev.post.id] = true;
-      } else if (!state.visiblePostIds.includes(ev.post.id)) {
-        state.visiblePostIds.push(ev.post.id);
-      }
-
+      if (!state.visiblePostIds.includes(ev.post.id)) state.visiblePostIds.push(ev.post.id);
       refresh();
-      if (!hasTimedComments) centerPost(ev.post.id);
+      centerPost(ev.post.id);
 
       if (ev.post.boosted) {
         if (!state.activeBoostIds) state.activeBoostIds = [];
@@ -477,8 +473,6 @@
           stopAtNextPostTs: nextPostTsAfter(ev.ts),
         };
       }
-      state.popupPostId = ev.post.id;
-      showOverlay(popupHtmlForPost(ev.post), { sticky: true, duration: dur });
       return;
     }
 
@@ -495,23 +489,17 @@
         };
       } else {
         delete state.typingComments[ev.post.id];
-        if (state.activeCommentFlows[ev.post.id]) {
-          delete state.activeCommentFlows[ev.post.id];
-          if (!state.visiblePostIds.includes(ev.post.id)) state.visiblePostIds.push(ev.post.id);
-        }
       }
 
       refresh();
       centerPost(ev.post.id);
-      if (state.popupPostId === ev.post.id) {
-        showOverlay(popupHtmlForPost(ev.post), { sticky: true, duration: dur });
-      }
       return;
     }
 
     if (ev.kind === 'carousel') {
-      state.popupPostId = ev.post.id;
-      showOverlay(popupHtmlForPost(ev.post), { sticky: true, duration: dur });
+      if (!state.visiblePostIds.includes(ev.post.id)) state.visiblePostIds.push(ev.post.id);
+      refresh();
+      centerPost(ev.post.id);
     }
   }
 

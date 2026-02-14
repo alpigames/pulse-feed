@@ -165,7 +165,7 @@
             if (isAdminPreview) {
               return `<div class="comment comment-edit" data-comment-id="${c.id}"><img class="avatar mini editable-comment-avatar" src="${cAvatar}" alt="${esc(c.author)} avatar" data-edit-comment-avatar="${c.id}" /><div class="comment-edit-fields"><input type="text" value="${esc(c.author)}" data-edit-comment-author="${c.id}" /><input type="number" step="0.1" min="0" value="${Number.isFinite(c.timestampSec) ? c.timestampSec : ''}" data-edit-comment-ts="${c.id}" /><textarea rows="2" data-edit-comment-text="${c.id}">${esc(c.text)}</textarea><button type="button" class="publish-btn" data-save-comment="${c.id}">Yorumu Kaydet</button></div></div>`;
             }
-            return `<p class="comment"><img class="avatar mini" src="${cAvatar}" alt="${esc(c.author)} avatar" /><span><strong>${esc(c.author)}</strong>: ${formatText(c.text)}</span></p>`;
+            return `<p class="comment" data-comment-id="${c.id}"><img class="avatar mini" src="${cAvatar}" alt="${esc(c.author)} avatar" /><span><strong>${esc(c.author)}</strong>: ${formatText(c.text)}</span></p>`;
           }).join('')}
           ${typing ? `<div class="typing-bubble"><img class="avatar mini" src="${typing.avatar}" alt="typing avatar" /><span><strong>${esc(typing.author)}</strong> yazıyor</span><i></i><i></i><i></i></div>` : ''}
         </section>
@@ -389,7 +389,28 @@
     if (!node) return;
     const rect = node.getBoundingClientRect();
     const delta = rect.top - ((window.innerHeight / 2) - (rect.height / 2));
-    window.scrollBy({ top: delta, behavior: 'smooth' });
+    window.scrollBy({ top: delta, behavior: 'auto' });
+  }
+
+  function alignPostTop(postId) {
+    if (page !== 'feed' || !el.feed) return;
+    const node = el.feed.querySelector(`[data-post-id="${postId}"]`);
+    if (!node) return;
+    const rect = node.getBoundingClientRect();
+    window.scrollBy({ top: rect.top, behavior: 'auto' });
+  }
+
+  function alignCommentWithBottomBuffer(postId, commentId) {
+    if (page !== 'feed' || !el.feed || !commentId) return;
+    const postNode = el.feed.querySelector(`[data-post-id="${postId}"]`);
+    if (!postNode) return;
+    const commentNode = postNode.querySelector(`[data-comment-id="${commentId}"]`);
+    if (!commentNode) return;
+    const rect = commentNode.getBoundingClientRect();
+    const reserve = Math.max(rect.height * 5, 220);
+    const targetTop = Math.max(30, window.innerHeight - reserve - rect.height);
+    const delta = rect.top - targetTop;
+    window.scrollBy({ top: delta, behavior: 'auto' });
   }
 
   let overlayTimer = 0;
@@ -462,7 +483,7 @@
     if (ev.kind === 'post') {
       if (!state.visiblePostIds.includes(ev.post.id)) state.visiblePostIds.push(ev.post.id);
       refresh();
-      centerPost(ev.post.id);
+      alignPostTop(ev.post.id);
 
       if (ev.post.boosted) {
         if (!state.activeBoostIds) state.activeBoostIds = [];
@@ -492,14 +513,14 @@
       }
 
       refresh();
-      centerPost(ev.post.id);
+      alignCommentWithBottomBuffer(ev.post.id, ev.comment.id);
       return;
     }
 
     if (ev.kind === 'carousel') {
       if (!state.visiblePostIds.includes(ev.post.id)) state.visiblePostIds.push(ev.post.id);
       refresh();
-      centerPost(ev.post.id);
+      alignPostTop(ev.post.id);
     }
   }
 

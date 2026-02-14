@@ -101,4 +101,7 @@ body[data-page="feed"] .feed-controls{position:sticky;top:0;background:#000;z-in
 .suggestion-item .suggestion-body small{font-size:.78rem;color:#c8d0cb}
 
 
-.premium-link{justify-content:space-between}
+.premium-link{justify-content:flex-start;align-items:center;gap:8px}
+
+.premium-icon{width:56px;display:inline-grid;place-items:center}
+.premium-link .vip-pill{margin-left:0;font-size:.62rem;padding:2px 7px}
